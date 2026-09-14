@@ -31,7 +31,9 @@ HistoryMgr::HistoryMgr()
   connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebooksUpdated, this,
           &HistoryMgr::loadHistory);
 
-  connect(&VNoteX::getInst(), &VNoteX::nodeRenamed, this, &HistoryMgr::renamePath);
+  connect(&VNoteX::getInst(), &VNoteX::nodeRenamed, this,
+          [this](const QString &p_oldPath, const QString &p_newPath, const QString &, const QString &,
+                 Notebook *p_notebook) { renamePath(p_oldPath, p_newPath, p_notebook); });
 
   loadHistory();
 }

@@ -99,9 +99,13 @@ signals:
   // @m_response of @p_event: true to continue the rename, false to cancel the rename.
   void nodeAboutToRename(Node *p_node, const QSharedPointer<Event> &p_event);
 
-  // Emitted after a node has been renamed. @p_oldPath and @p_newPath are the absolute
-  // file paths of the node before and after the rename.
-  void nodeRenamed(const QString &p_oldPath, const QString &p_newPath, Notebook *p_notebook);
+  // Emitted after a node has been renamed.
+  // @p_oldPath and @p_newPath are the absolute file paths before and after the rename.
+  // @p_oldRelativePath and @p_newRelativePath are the corresponding relative paths within
+  // the notebook (used by e.g. the location list to update the displayed name).
+  void nodeRenamed(const QString &p_oldPath, const QString &p_newPath,
+                  const QString &p_oldRelativePath, const QString &p_newRelativePath,
+                  Notebook *p_notebook);
 
   // @m_response of @p_event: true to continue the reload, false to cancel the reload.
   void nodeAboutToReload(Node *p_node, const QSharedPointer<Event> &p_event);

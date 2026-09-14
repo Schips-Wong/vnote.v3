@@ -1,7 +1,10 @@
 #include "locationlist.h"
 
+#include <QDir>
 #include <QHeaderView>
 #include <QLabel>
+
+#include <notebook/notebook.h>
 #include <QToolButton>
 #include <QVBoxLayout>
 
@@ -26,7 +29,11 @@ QIcon LocationList::s_folderIcon;
 
 QIcon LocationList::s_notebookIcon;
 
-LocationList::LocationList(QWidget *p_parent) : QFrame(p_parent) { setupUI(); }
+LocationList::LocationList(QWidget *p_parent) : QFrame(p_parent) {
+  setupUI();
+
+  connect(&VNoteX::getInst(), &VNoteX::nodeRenamed, this, &LocationList::handleNodeRenamed);
+}
 
 void LocationList::setupUI() {
   auto mainLayout = new QVBoxLayout(this);
@@ -195,6 +202,63 @@ void LocationList::addLocation(const ComplexLocation &p_location) {
 }
 
 void LocationList::startSession(const LocationCallback &p_callback) { m_callback = p_callback; }
+
+void LocationList::handleNodeRenamed(const QString &p_oldPath, const QString &p_newPath,
+                                     const QString &p_oldRelativePath,
+                                     const QString &p_newRelativePath, Notebook *p_notebook) {
+  Q_UNUSED(p_notebook);
+  if (p_oldPath == p_newPath) {
+    return;
+  }
+
+  const QChar sep = QDir::separator();
+  const QString prefixOldAbs = p_oldPath + sep;
+  const QString prefixNewAbs = p_newPath + sep;
+  const QString prefixOldAbsSlash = p_oldPath + QLatin1Char('/');
+  const QString prefixNewAbsSlash = p_newPath + QLatin1Char('/');
+  const QString prefixOldRel = p_oldRelativePath + sep;
+  const QString prefixNewRel = p_newRelativePath + sep;
+  const QString prefixOldRelSlash = p_oldRelativePath + QLatin1Char('/');
+  const QString prefixNewRelSlash = p_newRelativePath + QLatin1Char('/');
+
+  for (int i = 0; i < m_tree->topLevelItemCount(); ++i) {
+    auto item = m_tree->topLevelItem(i);
+
+    // Update the stored (absolute) path.
+    const QString path = item->data(Columns::PathColumn, Qt::UserRole).toString();
+    QString newPath = path;
+    if (path == p_oldPath) {
+      newPath = p_newPath;
+    } else if (path.startsWith(prefixOldAbs)) {
+      newPath = prefixNewAbs + path.mid(prefixOldAbs.size());
+    } else if (path.startsWith(prefixOldAbsSlash)) {
+      newPath = prefixNewAbsSlash + path.mid(prefixOldAbsSlash.size());
+    } else {
+      // Not related to the renamed node.
+      continue;
+    }
+    item->setData(Columns::PathColumn, Qt::UserRole, newPath);
+    item->setToolTip(Columns::PathColumn, newPath);
+
+    // Update the displayed (relative) path/name.
+    const QString display = item->text(Columns::PathColumn);
+    QString newDisplay = display;
+    if (display == p_oldPath) {
+      newDisplay = p_newPath;
+    } else if (display.startsWith(prefixOldAbs)) {
+      newDisplay = prefixNewAbs + display.mid(prefixOldAbs.size());
+    } else if (display.startsWith(prefixOldAbsSlash)) {
+      newDisplay = prefixNewAbsSlash + display.mid(prefixOldAbsSlash.size());
+    } else if (display == p_oldRelativePath) {
+      newDisplay = p_newRelativePath;
+    } else if (display.startsWith(prefixOldRel)) {
+      newDisplay = prefixNewRel + display.mid(prefixOldRel.size());
+    } else if (display.startsWith(prefixOldRelSlash)) {
+      newDisplay = prefixNewRelSlash + display.mid(prefixOldRelSlash.size());
+    }
+    item->setText(Columns::PathColumn, newDisplay);
+  }
+}
 
 Location LocationList::getItemLocation(const QTreeWidgetItem *p_item) const {
   Location loc;

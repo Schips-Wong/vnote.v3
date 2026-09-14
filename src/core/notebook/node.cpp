@@ -65,12 +65,14 @@ void Node::updateName(const QString &p_name) {
   }
 
   const QString oldPath = fetchAbsolutePath();
+  const QString oldRelativePath = fetchPath();
   getConfigMgr()->renameNode(this, p_name);
   Q_ASSERT(m_name == p_name);
   const QString newPath = fetchAbsolutePath();
+  const QString newRelativePath = fetchPath();
 
   emit m_notebook->nodeUpdated(this);
-  emit VNoteX::getInst().nodeRenamed(oldPath, newPath, m_notebook);
+  emit VNoteX::getInst().nodeRenamed(oldPath, newPath, oldRelativePath, newRelativePath, m_notebook);
 }
 
 bool Node::containsChild(const QString &p_name, bool p_caseSensitive) const {

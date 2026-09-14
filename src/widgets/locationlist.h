@@ -15,6 +15,8 @@
 namespace vnotex {
 class TitleBar;
 
+class Notebook;
+
 class LocationList : public QFrame {
   Q_OBJECT
 public:
@@ -49,6 +51,11 @@ private:
   const QIcon &getItemIcon(LocationType p_type);
 
   Location getItemLocation(const QTreeWidgetItem *p_item) const;
+
+  // Update the displayed path/name of items whose path matches a renamed node.
+  void handleNodeRenamed(const QString &p_oldPath, const QString &p_newPath,
+                         const QString &p_oldRelativePath, const QString &p_newRelativePath,
+                         Notebook *p_notebook);
 
   void updateItemsCountLabel();
 
