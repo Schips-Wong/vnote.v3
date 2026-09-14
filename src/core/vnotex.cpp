@@ -123,4 +123,11 @@ void VNoteX::initDocsUtils() {
 
 void VNoteX::initQuickAccess() {
   connect(this, &VNoteX::pinToQuickAccessRequested, this, &QuickAccessHelper::pinToQuickAccess);
+
+  // Keep quick access entries (and the location list) in sync when a pinned node is renamed.
+  connect(this, &VNoteX::nodeRenamed, this,
+          [this](const QString &p_oldPath, const QString &p_newPath, const QString &,
+                 const QString &, Notebook *) {
+            ConfigMgr::getInst().getSessionConfig().renameQuickAccessFile(p_oldPath, p_newPath);
+          });
 }

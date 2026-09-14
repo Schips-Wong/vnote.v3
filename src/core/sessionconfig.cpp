@@ -478,6 +478,72 @@ bool SessionConfig::tryCorrectQuickAccessFiles(void) {
   return false;
 }
 
+void SessionConfig::renameQuickAccessFile(const QString &p_oldPath, const QString &p_newPath) {
+  if (p_oldPath == p_newPath || p_oldPath.isEmpty() || p_newPath.isEmpty()) {
+    return;
+  }
+
+  const QChar sep = QDir::separator();
+  const QString prefixOldAbs = p_oldPath + sep;
+  const QString prefixNewAbs = p_newPath + sep;
+  const QString prefixOldSlash = p_oldPath + QLatin1Char('/');
+  const QString prefixNewSlash = p_newPath + QLatin1Char('/');
+
+  const QStringList oldResult = m_quickAccessFiles;
+  QStringList newResult;
+  bool changed = false;
+
+  for (const auto &file : oldResult) {
+    const auto fi = file.trimmed();
+    if (fi.isEmpty()) {
+      continue;
+    }
+
+    if (!fi.startsWith(QLatin1Char('#'))) {
+      // Plain absolute path entry.
+      QString newFile = file;
+      if (file == p_oldPath) {
+        newFile = p_newPath;
+        changed = true;
+      } else if (file.startsWith(prefixOldAbs)) {
+        newFile = prefixNewAbs + file.mid(prefixOldAbs.size());
+        changed = true;
+      } else if (file.startsWith(prefixOldSlash)) {
+        newFile = prefixNewSlash + file.mid(prefixOldSlash.size());
+        changed = true;
+      }
+      newResult << newFile;
+      continue;
+    }
+
+    // vxurl entry: #signature:filePath
+    const QString signature = VxUrlUtils::getSignatureFromVxURL(file);
+    const QString oldFilePath = VxUrlUtils::getFilePathFromVxURL(file);
+    QString newFilePath;
+    if (oldFilePath == p_oldPath) {
+      newFilePath = p_newPath;
+    } else if (oldFilePath.startsWith(prefixOldAbs)) {
+      newFilePath = prefixNewAbs + oldFilePath.mid(prefixOldAbs.size());
+    } else if (oldFilePath.startsWith(prefixOldSlash)) {
+      newFilePath = prefixNewSlash + oldFilePath.mid(prefixOldSlash.size());
+    } else {
+      newFilePath = oldFilePath;
+    }
+
+    if (newFilePath != oldFilePath) {
+      newResult << VxUrlUtils::generateVxURL(signature, newFilePath);
+      changed = true;
+    } else {
+      newResult << file;
+    }
+  }
+
+  if (changed) {
+    m_quickAccessFiles = newResult;
+    update();
+  }
+}
+
 void SessionConfig::loadExternalPrograms(const QJsonObject &p_session) {
   const auto arr = p_session.value(QStringLiteral("external_programs")).toArray();
   m_externalPrograms.resize(arr.size());

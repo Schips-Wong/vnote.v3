@@ -147,6 +147,10 @@ public:
   void removeQuickAccessFile(const QString &p_file);
   bool tryCorrectQuickAccessFiles(void);
 
+  // Update the stored paths of quick access entries when a node is renamed.
+  // @p_oldPath and @p_newPath are the absolute file paths before/after the rename.
+  void renameQuickAccessFile(const QString &p_oldPath, const QString &p_newPath);
+
   const QVector<ExternalProgram> &getExternalPrograms() const;
   const ExternalProgram *findExternalProgram(const QString &p_name) const;
 
