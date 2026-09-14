@@ -32,6 +32,11 @@ public:
   QByteArray saveState() const;
   void restoreState(const QByteArray &p_data);
 
+signals:
+  // Emitted when an item in the list is right-clicked, with its location and the global
+  // position of the mouse, so the owner can show a context menu (e.g. the note menu).
+  void locationContextMenuRequested(const Location &p_location, const QPoint &p_globalPos);
+
 private:
   enum Columns { PathColumn = 0, LineColumn, TextColumn };
 

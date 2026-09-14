@@ -49,6 +49,16 @@ void LocationList::setupUI() {
     }
     m_callback(getItemLocation(p_item));
   });
+  m_tree->setContextMenuPolicy(Qt::CustomContextMenu);
+  connect(m_tree, &QTreeWidget::customContextMenuRequested, this,
+          [this](const QPoint &p_pos) {
+            auto item = m_tree->itemAt(p_pos);
+            if (!item) {
+              return;
+            }
+            emit locationContextMenuRequested(getItemLocation(item),
+                                             m_tree->viewport()->mapToGlobal(p_pos));
+          });
   mainLayout->addWidget(m_tree);
 
   m_navigationWrapper.reset(new NavigationModeWrapper<QTreeWidget, QTreeWidgetItem>(m_tree));

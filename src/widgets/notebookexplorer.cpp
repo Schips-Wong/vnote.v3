@@ -399,6 +399,22 @@ void NotebookExplorer::manageNotebooks() {
   dialog.exec();
 }
 
+void NotebookExplorer::popupContextMenuForNode(Node *p_node, const QPoint &p_globalPos) {
+  if (!p_node) {
+    return;
+  }
+
+  // Ensure the notebook owning the node is the current one so its tree can be selected.
+  if (p_node->getNotebook() != m_currentNotebook.data()) {
+    auto nb = VNoteX::getInst().getNotebookMgr().findNotebookById(p_node->getNotebook()->getId());
+    if (nb) {
+      setCurrentNotebook(nb);
+    }
+  }
+
+  m_nodeExplorer->popupContextMenuForNode(p_node, p_globalPos);
+}
+
 void NotebookExplorer::locateNode(Node *p_node) {
   Q_ASSERT(p_node);
   auto nb = p_node->getNotebook();

@@ -1105,10 +1105,12 @@ void NotebookNodeExplorer::createMasterContextMenuOnRoot(QMenu *p_menu) {
   createAndAddAction(Action::OpenLocation, p_menu);
 }
 
-void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_node,
-                                                   bool p_master) {
-  const int selectedSize =
-      p_master ? m_masterExplorer->selectedItems().size() : m_slaveExplorer->selectedItems().size();
+void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_node, bool p_master,
+                                                   int p_selectedSize) {
+  if (p_selectedSize < 0) {
+    p_selectedSize =
+        p_master ? m_masterExplorer->selectedItems().size() : m_slaveExplorer->selectedItems().size();
+  }
 
   createAndAddAction(Action::Edit, p_menu, p_master);
 
@@ -1118,7 +1120,7 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
 
   p_menu->addSeparator();
 
-  if (selectedSize == 1 && p_node->isContainer()) {
+  if (p_selectedSize == 1 && p_node->isContainer()) {
     createAndAddAction(Action::ExpandAll, p_menu, p_master);
   }
 
@@ -1134,7 +1136,7 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
 
   createAndAddAction(Action::Cut, p_menu, p_master);
 
-  if (selectedSize == 1 && isPasteOnNodeAvailable(p_node)) {
+  if (p_selectedSize == 1 && isPasteOnNodeAvailable(p_node)) {
     createAndAddAction(Action::Paste, p_menu, p_master);
   }
 
@@ -1148,7 +1150,7 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
 
   createAndAddAction(Action::Sort, p_menu, p_master);
 
-  if (selectedSize == 1 && m_notebook->tag() && !p_node->isContainer()) {
+  if (p_selectedSize == 1 && m_notebook->tag() && !p_node->isContainer()) {
     p_menu->addSeparator();
 
     createAndAddAction(Action::Tag, p_menu, p_master);
@@ -1158,7 +1160,7 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
 
   createAndAddAction(Action::PinToQuickAccess, p_menu, p_master);
 
-  if (selectedSize == 1) {
+  if (p_selectedSize == 1) {
     createAndAddAction(Action::CopyPath, p_menu, p_master);
 
     createAndAddAction(Action::OpenLocation, p_menu, p_master);
@@ -1187,11 +1189,26 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
   }
 }
 
+void NotebookNodeExplorer::popupContextMenuForNode(Node *p_node, const QPoint &p_globalPos) {
+  if (!p_node || p_node->getNotebook() != m_notebook.data()) {
+    return;
+  }
+
+  const bool master = belongsToMasterExplorer(p_node);
+
+  // Select the node so the context menu actions operate on it. setCurrentNode() also expands
+  // the tree to make the node visible.
+  setCurrentNode(p_node);
+
+  QScopedPointer<QMenu> menu(WidgetsFactory::createMenu());
+  createContextMenuOnNode(menu.data(), p_node, master, 1);
+  menu->exec(p_globalPos);
+}
+
 void NotebookNodeExplorer::createContextMenuOnExternalNode(QMenu *p_menu,
                                                            const ExternalNode *p_node,
                                                            bool p_master) {
   Q_UNUSED(p_node);
-
   const int selectedSize =
       p_master ? m_masterExplorer->selectedItems().size() : m_slaveExplorer->selectedItems().size();
 

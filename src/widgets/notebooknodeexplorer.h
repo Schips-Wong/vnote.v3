@@ -118,6 +118,11 @@ public:
 
   Node *currentExploredNode() const;
 
+  // Show the context menu for @p_node as if the user right-clicked it in the explorer.
+  // The notebook owning @p_node must be the current notebook. The tree will be expanded to
+  // and select @p_node so that the menu's actions operate on it.
+  void popupContextMenuForNode(Node *p_node, const QPoint &p_globalPos);
+
   QByteArray saveState() const;
 
   void restoreState(const QByteArray &p_data);
@@ -252,7 +257,8 @@ private:
 
   void createMasterContextMenuOnRoot(QMenu *p_menu);
 
-  void createContextMenuOnNode(QMenu *p_menu, const Node *p_node, bool p_master);
+  void createContextMenuOnNode(QMenu *p_menu, const Node *p_node, bool p_master,
+                               int p_selectedSize = -1);
 
   void createContextMenuOnExternalNode(QMenu *p_menu, const ExternalNode *p_node, bool p_master);
 

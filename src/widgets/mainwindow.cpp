@@ -6,6 +6,7 @@
 #include <QDebug>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QMenu>
 #include <QHotkey>
 #include <QProgressDialog>
 #include <QResizeEvent>
@@ -16,6 +17,7 @@
 #include <QTabBar>
 #include <QTextEdit>
 #include <QTimer>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QVariant>
 #include <QWebEngineView>
@@ -42,6 +44,7 @@
 #include "viewarea.h"
 #include "viewwindow.h"
 #include "vnotex.h"
+#include "widgetsfactory.h"
 #include "windowspanel.h"
 #include "windowsprovider.h"
 #include <core/configmgr.h>
@@ -53,7 +56,9 @@
 #include <core/sessionconfig.h>
 #include <core/thememgr.h>
 #include <core/widgetconfig.h>
+#include <notebook/node.h>
 #include <notebook/notebook.h>
+#include <utils/clipboardutils.h>
 #include <utils/docsutils.h>
 #include <utils/iconutils.h>
 #include <utils/widgetutils.h>
@@ -290,6 +295,27 @@ void MainWindow::setupWindowsPanel() {
 void MainWindow::setupLocationList() {
   m_locationList = new LocationList(this);
   m_locationList->setObjectName("LocationList.vnotex");
+
+  connect(m_locationList, &LocationList::locationContextMenuRequested, this,
+          [this](const Location &p_location, const QPoint &p_globalPos) {
+            auto node = VNoteX::getInst().getNotebookMgr().loadNodeByPath(p_location.m_path);
+            if (node) {
+              // Show the same context menu as right-clicking the note in the notebook explorer.
+              m_notebookExplorer->popupContextMenuForNode(node.data(), p_globalPos);
+            } else {
+              // Fallback menu for items that are not indexed notebook nodes (external files, etc.).
+              QScopedPointer<QMenu> menu(WidgetsFactory::createMenu());
+              auto openLocAct = menu->addAction(tr("Open File Location"));
+              connect(openLocAct, &QAction::triggered, this, [p_location]() {
+                WidgetUtils::openUrlByDesktop(QUrl::fromLocalFile(p_location.m_path));
+              });
+              auto copyPathAct = menu->addAction(tr("Copy Path"));
+              connect(copyPathAct, &QAction::triggered, this, [p_location]() {
+                ClipboardUtils::setTextToClipboard(p_location.m_path);
+              });
+              menu->exec(p_globalPos);
+            }
+          });
 }
 
 void MainWindow::setupNotebookExplorer() {

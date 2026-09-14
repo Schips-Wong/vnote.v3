@@ -57,6 +57,9 @@ public slots:
 
   void locateNode(Node *p_node);
 
+  // Show the note context menu for @p_node as if it was right-clicked in the explorer.
+  void popupContextMenuForNode(Node *p_node, const QPoint &p_globalPos);
+
   void manageNotebooks();
 
 signals:
