@@ -93,6 +93,12 @@ void BundleNotebook::removeHistory(const QString &p_itemPath) {
   updateNotebookConfig();
 }
 
+void BundleNotebook::renameHistory(const QString &p_oldPath, const QString &p_newPath) {
+  HistoryMgr::renameHistoryItem(m_history, p_oldPath, p_newPath);
+
+  updateNotebookConfig();
+}
+
 void BundleNotebook::addHistory(const HistoryItem &p_item) {
   HistoryItem item(p_item);
   item.m_path = getBackend()->getRelativePath(item.m_path);

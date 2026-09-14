@@ -9,6 +9,7 @@
 #include <notebookbackend/inotebookbackend.h>
 #include <notebookconfigmgr/inotebookconfigmgr.h>
 #include <utils/pathutils.h>
+#include <core/vnotex.h>
 
 using namespace vnotex;
 
@@ -63,10 +64,13 @@ void Node::updateName(const QString &p_name) {
     return;
   }
 
+  const QString oldPath = fetchAbsolutePath();
   getConfigMgr()->renameNode(this, p_name);
   Q_ASSERT(m_name == p_name);
+  const QString newPath = fetchAbsolutePath();
 
   emit m_notebook->nodeUpdated(this);
+  emit VNoteX::getInst().nodeRenamed(oldPath, newPath, m_notebook);
 }
 
 bool Node::containsChild(const QString &p_name, bool p_caseSensitive) const {

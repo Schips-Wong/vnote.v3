@@ -153,6 +153,7 @@ public:
   const QVector<HistoryItem> &getHistory() const;
   void addHistory(const HistoryItem &p_item);
   void removeHistory(const QString &p_itemPath);
+  void renameHistory(const QString &p_oldPath, const QString &p_newPath);
   void clearHistory();
 
   const QVector<QuickNoteScheme> &getQuickNoteSchemes() const;

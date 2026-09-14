@@ -1,6 +1,7 @@
 #include "historymgr.h"
 
 #include <QDebug>
+#include <QDir>
 
 #include "configmgr.h"
 #include "coreconfig.h"
@@ -29,6 +30,8 @@ HistoryMgr::HistoryMgr()
           ConfigMgr::getInst().getCoreConfig().isPerNotebookHistoryEnabled()) {
   connect(&VNoteX::getInst().getNotebookMgr(), &NotebookMgr::notebooksUpdated, this,
           &HistoryMgr::loadHistory);
+
+  connect(&VNoteX::getInst(), &VNoteX::nodeRenamed, this, &HistoryMgr::renamePath);
 
   loadHistory();
 }
@@ -182,6 +185,55 @@ void HistoryMgr::insertHistoryItem(QVector<HistoryItem> &p_history, const Histor
   if (p_history.size() > maxHistoryCount) {
     p_history.remove(0, p_history.size() - maxHistoryCount);
   }
+}
+
+static void renamePathInPlace(QString &p_path, const QString &p_oldPath, const QString &p_newPath) {
+  if (p_path == p_oldPath) {
+    p_path = p_newPath;
+  } else {
+    const QString prefixOldNative = p_oldPath + QDir::separator();
+    const QString prefixNewNative = p_newPath + QDir::separator();
+    const QString prefixOldSlash = p_oldPath + QLatin1Char('/');
+    const QString prefixNewSlash = p_newPath + QLatin1Char('/');
+    if (p_path.startsWith(prefixOldNative)) {
+      p_path = prefixNewNative + p_path.mid(prefixOldNative.size());
+    } else if (p_path.startsWith(prefixOldSlash)) {
+      p_path = prefixNewSlash + p_path.mid(prefixOldSlash.size());
+    }
+  }
+}
+
+void HistoryMgr::renameHistoryItem(QVector<HistoryItem> &p_history, const QString &p_oldPath,
+                                   const QString &p_newPath) {
+  if (p_oldPath == p_newPath) {
+    return;
+  }
+
+  for (auto &item : p_history) {
+    renamePathInPlace(item.m_path, p_oldPath, p_newPath);
+  }
+}
+
+void HistoryMgr::renamePath(const QString &p_oldPath, const QString &p_newPath, Notebook *p_notebook) {
+  if (p_oldPath == p_newPath) {
+    return;
+  }
+
+  // Update the in-memory cache (items store the path in m_item.m_path).
+  for (const auto &fullItem : m_history) {
+    renamePathInPlace(fullItem->m_item.m_path, p_oldPath, p_newPath);
+  }
+
+  // Persist to the underlying storage.
+  if (p_notebook && m_perNotebookHistoryEnabled && p_notebook->history()) {
+    const auto &backend = p_notebook->getBackend();
+    p_notebook->history()->renameHistory(backend->getRelativePath(p_oldPath),
+                                         backend->getRelativePath(p_newPath));
+  } else {
+    ConfigMgr::getInst().getSessionConfig().renameHistory(p_oldPath, p_newPath);
+  }
+
+  emit historyUpdated();
 }
 
 void HistoryMgr::clear() {

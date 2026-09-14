@@ -48,6 +48,8 @@ public:
 
   void removeHistory(const QString &p_itemPath) Q_DECL_OVERRIDE;
 
+  void renameHistory(const QString &p_oldPath, const QString &p_newPath) Q_DECL_OVERRIDE;
+
   void addHistory(const HistoryItem &p_item) Q_DECL_OVERRIDE;
 
   void clearHistory() Q_DECL_OVERRIDE;

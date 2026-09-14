@@ -17,6 +17,8 @@ public:
 
   virtual void removeHistory(const QString &p_itemPath) = 0;
 
+  virtual void renameHistory(const QString &p_oldPath, const QString &p_newPath) = 0;
+
   virtual void clearHistory() = 0;
 };
 } // namespace vnotex

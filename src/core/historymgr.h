@@ -49,6 +49,10 @@ public:
 
   void remove(const QVector<QString> &p_paths, Notebook *p_notebook);
 
+  // Rename history items whose path matches @p_oldPath (or is located under it, when a
+  // folder is renamed). @p_oldPath and @p_newPath are absolute file paths.
+  void renamePath(const QString &p_oldPath, const QString &p_newPath, Notebook *p_notebook);
+
   void clear();
 
   LastClosedFile popLastClosedFile();
@@ -56,6 +60,10 @@ public:
   static void removeHistoryItem(QVector<HistoryItem> &p_history, const QString &p_itemPath);
 
   static void insertHistoryItem(QVector<HistoryItem> &p_history, const HistoryItem &p_item);
+
+  // Rename history items in @p_history (paths are matched exactly or by parent-folder prefix).
+  static void renameHistoryItem(QVector<HistoryItem> &p_history, const QString &p_oldPath,
+                               const QString &p_newPath);
 
 signals:
   void historyUpdated();

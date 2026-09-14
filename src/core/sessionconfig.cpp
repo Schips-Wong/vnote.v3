@@ -536,6 +536,11 @@ void SessionConfig::removeHistory(const QString &p_itemPath) {
   update();
 }
 
+void SessionConfig::renameHistory(const QString &p_oldPath, const QString &p_newPath) {
+  HistoryMgr::renameHistoryItem(m_history, p_oldPath, p_newPath);
+  update();
+}
+
 void SessionConfig::clearHistory() {
   m_history.clear();
   update();
