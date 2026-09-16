@@ -62,6 +62,14 @@ private:
 
   void setupDatabase();
 
+  // Path of the per-machine local database cache.
+  // The database is a derived index of the notebook config and MUST NOT live inside the notebook
+  // folder: when the notebook is stored on a shared/synchronized folder, multiple machines writing
+  // the same notebook.db causes locking conflicts and corruption. Keeping it in a local per-user
+  // cache keyed by the notebook root path avoids the conflict entirely (tags/nodes are rebuilt
+  // from the config files, so nothing is lost across machines).
+  QString getLocalDatabasePath() const;
+
   void fillNodeTableFromConfig(Node *p_node, bool p_ignoreId, int &p_totalCnt);
 
   void initDatabase();

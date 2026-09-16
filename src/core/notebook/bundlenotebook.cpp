@@ -1,14 +1,20 @@
 #include "bundlenotebook.h"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 
+#include <core/configmgr.h>
 #include <core/exception.h>
 #include <core/historymgr.h>
 #include <notebookbackend/inotebookbackend.h>
 #include <notebookconfigmgr/bundlenotebookconfigmgr.h>
 #include <notebookconfigmgr/notebookconfig.h>
 #include <utils/fileutils.h>
+#include <utils/pathutils.h>
 
 #include "notebookdatabaseaccess.h"
 #include "notebooktagmgr.h"
@@ -31,8 +37,24 @@ BundleNotebookConfigMgr *BundleNotebook::getBundleNotebookConfigMgr() const {
 }
 
 void BundleNotebook::setupDatabase() {
-  auto dbPath = getBackend()->getFullPath(BundleNotebookConfigMgr::getDatabasePath());
+  const auto dbPath = getLocalDatabasePath();
+
+  // Make sure the cache folder exists.
+  QDir().mkpath(QFileInfo(dbPath).absolutePath());
+
   m_dbAccess = new NotebookDatabaseAccess(this, dbPath, this);
+}
+
+QString BundleNotebook::getLocalDatabasePath() const {
+  // Key the cache by the notebook root path so that different notebooks never share a database
+  // file, and the same notebook always maps to the same local file on this machine.
+  const QString rootPath = PathUtils::cleanPath(getRootFolderAbsolutePath());
+  const QString key = QString::fromLatin1(
+      QCryptographicHash::hash(rootPath.toUtf8(), QCryptographicHash::Sha1).toHex());
+
+  const QString cacheFolder = PathUtils::concatenateFilePath(
+      ConfigMgr::getInst().getUserFolder(), QStringLiteral("notebook_db_cache"));
+  return PathUtils::concatenateFilePath(cacheFolder, key + QStringLiteral(".db"));
 }
 
 void BundleNotebook::initializeInternal() {
@@ -45,6 +67,19 @@ void BundleNotebook::initializeInternal() {
 
 void BundleNotebook::initDatabase() {
   m_dbAccess->initialize(m_configVersion);
+
+  // The database is now a per-machine local cache. Remove the legacy in-notebook database file
+  // (if any) so that it is no longer synchronized/shared and cannot cause conflicts.
+  {
+    const auto legacyPath = BundleNotebookConfigMgr::getDatabasePath();
+    if (getBackend()->exists(legacyPath)) {
+      try {
+        getBackend()->removeFile(legacyPath);
+      } catch (Exception &p_e) {
+        qWarning() << "failed to remove legacy database file" << legacyPath << p_e.what();
+      }
+    }
+  }
 
   if (m_dbAccess->isFresh()) {
     // For previous version notebook without DB, just ignore the node Id from config.
@@ -75,6 +110,10 @@ void BundleNotebook::remove() {
 
   // Remove notebook config.
   removeNotebookConfig();
+
+  // Remove the local database cache.
+  m_dbAccess->close();
+  QFile::remove(getLocalDatabasePath());
 
   // Remove notebook root folder if it is empty.
   if (!FileUtils::removeDirIfEmpty(getRootFolderAbsolutePath())) {
@@ -144,18 +183,14 @@ bool BundleNotebook::rebuildDatabase() {
   Q_ASSERT(m_dbAccess);
   m_dbAccess->close();
 
-  auto backend = getBackend();
-  const auto dbPath = BundleNotebookConfigMgr::getDatabasePath();
-  if (backend->exists(dbPath)) {
-    try {
-      backend->removeFile(dbPath);
-    } catch (Exception &p_e) {
-      qWarning() << "failed to delete database file" << dbPath << p_e.what();
-      if (!m_dbAccess->open()) {
-        qWarning() << "failed to open notebook database (restart is needed)";
-      }
-      return false;
+  const auto dbPath = getLocalDatabasePath();
+  QFile dbFile(dbPath);
+  if (dbFile.exists() && !dbFile.remove()) {
+    qWarning() << "failed to delete database file" << dbPath;
+    if (!m_dbAccess->open()) {
+      qWarning() << "failed to open notebook database (restart is needed)";
     }
+    return false;
   }
 
   m_dbAccess->deleteLater();

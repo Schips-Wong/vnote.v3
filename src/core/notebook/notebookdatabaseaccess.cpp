@@ -32,6 +32,15 @@ bool NotebookDatabaseAccess::open() {
   }
 
   {
+    // Wait (instead of failing immediately with SQLITE_BUSY) if another connection temporarily
+    // holds a lock. Mitigates "database is locked" when several VNote instances run at once.
+    QSqlQuery query(db);
+    if (!query.exec(QStringLiteral("PRAGMA busy_timeout = 5000"))) {
+      qWarning() << "failed to set busy_timeout" << query.lastError().text();
+    }
+  }
+
+  {
     // Enable foreign key support.
     QSqlQuery query(db);
     if (!query.exec("PRAGMA foreign_keys = ON")) {
