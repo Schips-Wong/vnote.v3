@@ -191,7 +191,8 @@ void LocationList::addLocation(const ComplexLocation &p_location) {
       auto subItem = new QTreeWidgetItem(item);
       setItemLocationLineAndText(subItem, line);
     }
-    item->setExpanded(true);
+    // Keep the item collapsed by default.
+    item->setExpanded(false);
   }
 
   if (m_tree->topLevelItemCount() == 1) {
