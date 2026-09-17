@@ -1,7 +1,12 @@
 #include "notebooknodeexplorer.h"
 
 #include <QAction>
+#include <QByteArray>
 #include <QColorDialog>
+#include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
 #include <QMenu>
 #include <QPainter>
 #include <QSet>
@@ -31,6 +36,7 @@
 #include <notebook/node.h>
 #include <notebook/nodeparameters.h>
 #include <notebook/notebook.h>
+#include <notebookbackend/inotebookbackend.h>
 #include <notebookconfigmgr/inotebookconfigmgr.h>
 #include <utils/clipboardutils.h>
 #include <utils/docsutils.h>
@@ -1261,6 +1267,55 @@ void NotebookNodeExplorer::createSlaveContextMenuOnMasterNode(QMenu *p_menu) {
   createAndAddAction(Action::OpenLocation, p_menu, false);
 }
 
+// Load the keyword-to-tag mapping from "<notebook root>/vx_keyword_to_tag.json" and return the tag
+// values whose keys appear in @p_content. The JSON is a flat object: { "keyword": "tag", ... }.
+static QStringList fetchKeywordMappedTags(Notebook *p_notebook, const QString &p_content) {
+  QStringList tags;
+  if (!p_notebook || p_content.isEmpty()) {
+    return tags;
+  }
+
+  const auto &backend = p_notebook->getBackend();
+  if (!backend) {
+    return tags;
+  }
+
+  const QString mappingFile = QStringLiteral("vx_keyword_to_tag.json");
+
+  QByteArray data;
+  try {
+    if (!backend->existsFile(mappingFile)) {
+      return tags;
+    }
+    data = backend->readFile(mappingFile);
+  } catch (Exception &p_e) {
+    qWarning() << "failed to read keyword-to-tag mapping" << mappingFile << p_e.what();
+    return tags;
+  }
+
+  QJsonParseError error;
+  const auto doc = QJsonDocument::fromJson(data, &error);
+  if (error.error != QJsonParseError::NoError || !doc.isObject()) {
+    qWarning() << "failed to parse keyword-to-tag mapping" << mappingFile << error.errorString();
+    return tags;
+  }
+
+  const auto obj = doc.object();
+  for (auto it = obj.constBegin(); it != obj.constEnd(); ++it) {
+    const QString key = it.key().trimmed();
+    const QString value = it.value().toString().trimmed();
+    if (key.isEmpty() || value.isEmpty()) {
+      continue;
+    }
+
+    if (p_content.contains(key, Qt::CaseInsensitive) && !tags.contains(value)) {
+      tags << value;
+    }
+  }
+
+  return tags;
+}
+
 static QIcon generateMenuActionIcon(const QString &p_name) {
   const auto &themeMgr = VNoteX::getInst().getThemeMgr();
   return IconUtils::fetchIconWithDisabledState(themeMgr.getIconFile(p_name));
@@ -1568,11 +1623,14 @@ QAction *NotebookNodeExplorer::createAction(Action p_act, QObject *p_parent, boo
         return;
       }
 
+      // Dictionary tags whose keywords appear in the content come first.
+      QStringList candidates = fetchKeywordMappedTags(node->getNotebook(), content);
+
       const auto keywords = KeywordExtractor::extract(content, 30);
-      QStringList candidates;
-      candidates.reserve(keywords.size());
       for (const auto &kw : keywords) {
-        candidates << kw.m_word;
+        if (!candidates.contains(kw.m_word)) {
+          candidates << kw.m_word;
+        }
       }
 
       if (candidates.isEmpty()) {
