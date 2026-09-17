@@ -4,6 +4,7 @@
 #include <QHash>
 
 #include "bundlenotebook.h"
+#include "keywordtagmapper.h"
 #include "tag.h"
 
 using namespace vnotex;
@@ -224,6 +225,9 @@ bool NotebookTagMgr::renameTag(const QString &p_name, const QString &p_newName) 
     }
     node->updateTags(tags);
   }
+
+  // Keep the keyword-to-tag mapping file in sync (values referencing the renamed tag).
+  KeywordTagMapper::renameTagValue(m_notebook, p_name, p_newName);
 
   emit m_notebook->tagsUpdated();
   return true;

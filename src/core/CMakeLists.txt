@@ -42,6 +42,7 @@ target_sources(vnote PRIVATE
     notebook/externalnode.cpp notebook/externalnode.h
     notebook/historyi.h
     notebook/inotebookfactory.h
+    notebook/keywordtagmapper.cpp notebook/keywordtagmapper.h
     notebook/node.cpp notebook/node.h
     notebook/nodeparameters.cpp notebook/nodeparameters.h
     notebook/nodevisual.cpp notebook/nodevisual.h
