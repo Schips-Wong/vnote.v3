@@ -334,6 +334,8 @@ private:
 
   void openCurrentNodeProperties(bool p_master);
 
+  void autoDetectTags(bool p_master);
+
   bool belongsToMasterExplorer(const Node *p_node) const;
 
   bool belongsToMasterExplorer(const ExternalNode *p_node) const;

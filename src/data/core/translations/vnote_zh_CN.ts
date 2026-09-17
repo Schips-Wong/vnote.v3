@@ -3808,9 +3808,8 @@ Remove them from the configuration?</source>
 <context>
     <name>vnotex::NotebookNodeExplorer</name>
     <message>
-        <location filename="../../../widgets/notebooknodeexplorer.cpp" line="1561"/>
-        <source>Auto Tag &amp;Detection</source>
-        <translation>自动标签探测(&amp;D)</translation>
+        <source>&amp;Auto Tag Detection</source>
+        <translation>自动标签探测(&amp;A)</translation>
     </message>
     <message>
         <source>Only notes with content support auto tag detection.</source>
@@ -6245,7 +6244,7 @@ Backup file last modified time: %2</source>
     </message>
     <message>
         <source>Update sets the tag's keyword mappings to exactly the keywords in the box (separated by ';'). Remove a keyword by deleting it from the box; clear all mappings by emptying the box.</source>
-        <translation>'更新' : 把标签的关键字映射设置为编辑框中的内容（以 ';' 分隔）：想删除某个关键字，就在编辑框中把它删掉；清空编辑框则会清除该标签的全部映射。</translation>
+        <translation>'更新'会让标签的关键字映射设置为编辑框中的内容（以 ';' 分隔）：想删除某个关键字，就在编辑框中把它删掉；清空编辑框则会清除该标签的全部映射。</translation>
     </message>
     <message>
         <source>No keyword mapping yet.</source>

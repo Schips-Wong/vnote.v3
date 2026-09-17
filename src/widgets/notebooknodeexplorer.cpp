@@ -1555,46 +1555,9 @@ QAction *NotebookNodeExplorer::createAction(Action p_act, QObject *p_parent, boo
 
   case Action::AutoTagDetection:
     act = new QAction(generateMenuActionIcon(QStringLiteral("tag.svg")),
-                      tr("Auto Tag &Detection"), p_parent);
-    connect(act, &QAction::triggered, this, [this, p_master]() {
-      auto node = p_master ? getCurrentMasterNode() : getCurrentSlaveNode();
-      if (!node || checkInvalidNode(node)) {
-        return;
-      }
-
-      if (!node->hasContent()) {
-        MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
-                                 tr("Only notes with content support auto tag detection."));
-        return;
-      }
-
-      auto file = node->getContentFile();
-      const QString content = file ? file->read() : QString();
-      if (content.trimmed().isEmpty()) {
-        MessageBoxHelper::notify(MessageBoxHelper::Type::Information, tr("The note is empty."));
-        return;
-      }
-
-      // Dictionary tags whose keywords appear in the content come first.
-      const auto mapping = KeywordTagMapper::load(node->getNotebook());
-      QStringList candidates = KeywordTagMapper::matchTags(mapping, content);
-
-      const auto keywords = KeywordExtractor::extract(content, 30);
-      for (const auto &kw : keywords) {
-        if (!candidates.contains(kw.m_word)) {
-          candidates << kw.m_word;
-        }
-      }
-
-      if (candidates.isEmpty()) {
-        MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
-                                 tr("No candidate tags detected in the note."));
-        return;
-      }
-
-      AutoTagDialog dialog(node, candidates, VNoteX::getInst().getMainWindow());
-      dialog.exec();
-    });
+                      tr("&Auto Tag Detection"), p_parent);
+    WidgetUtils::addActionShortcutText(act, QStringLiteral("Ctrl+T"));
+    connect(act, &QAction::triggered, this, [this, p_master]() { autoDetectTags(p_master); });
     break;
 
   case Action::SetBackgroundColor:
@@ -2556,6 +2519,46 @@ bool NotebookNodeExplorer::isActionFromMaster() const {
   return true;
 }
 
+void NotebookNodeExplorer::autoDetectTags(bool p_master) {
+  auto node = p_master ? getCurrentMasterNode() : getCurrentSlaveNode();
+  if (!node || checkInvalidNode(node)) {
+    return;
+  }
+
+  if (!node->hasContent()) {
+    MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
+                             tr("Only notes with content support auto tag detection."));
+    return;
+  }
+
+  auto file = node->getContentFile();
+  const QString content = file ? file->read() : QString();
+  if (content.trimmed().isEmpty()) {
+    MessageBoxHelper::notify(MessageBoxHelper::Type::Information, tr("The note is empty."));
+    return;
+  }
+
+  // Dictionary tags whose keywords appear in the content come first.
+  const auto mapping = KeywordTagMapper::load(node->getNotebook());
+  QStringList candidates = KeywordTagMapper::matchTags(mapping, content);
+
+  const auto keywords = KeywordExtractor::extract(content, 30);
+  for (const auto &kw : keywords) {
+    if (!candidates.contains(kw.m_word)) {
+      candidates << kw.m_word;
+    }
+  }
+
+  if (candidates.isEmpty()) {
+    MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
+                             tr("No candidate tags detected in the note."));
+    return;
+  }
+
+  AutoTagDialog dialog(node, candidates, VNoteX::getInst().getMainWindow());
+  dialog.exec();
+}
+
 void NotebookNodeExplorer::setupShortcuts() {
   const auto &coreConfig = ConfigMgr::getInst().getCoreConfig();
 
@@ -2607,6 +2610,16 @@ void NotebookNodeExplorer::setupShortcuts() {
     if (shortcut) {
       connect(shortcut, &QShortcut::activated, this,
               [this]() { openCurrentNodeProperties(isActionFromMaster()); });
+    }
+  }
+
+  // AutoTagDetection.
+  {
+    auto shortcut =
+        WidgetUtils::createShortcut(QStringLiteral("Ctrl+T"), this, Qt::WidgetWithChildrenShortcut);
+    if (shortcut) {
+      connect(shortcut, &QShortcut::activated, this,
+              [this]() { autoDetectTags(isActionFromMaster()); });
     }
   }
 
