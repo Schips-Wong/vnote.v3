@@ -8,12 +8,18 @@
 
 #include <core/exception.h>
 #include <notebookbackend/inotebookbackend.h>
+#include <notebookconfigmgr/bundlenotebookconfigmgr.h>
+#include <utils/pathutils.h>
 
 #include "notebook.h"
 
 using namespace vnotex;
 
-QString KeywordTagMapper::getFileName() { return QStringLiteral("vx_keyword_to_tag.json"); }
+QString KeywordTagMapper::getFileName() {
+  // Lives inside the notebook config folder (e.g. "<notebook>/vx_notebook/").
+  return PathUtils::concatenateFilePath(BundleNotebookConfigMgr::getConfigFolderName(),
+                                        QStringLiteral("vx_keyword_to_tag.json"));
+}
 
 QJsonObject KeywordTagMapper::load(Notebook *p_notebook) {
   if (!p_notebook) {
@@ -28,6 +34,24 @@ QJsonObject KeywordTagMapper::load(Notebook *p_notebook) {
   const QString file = getFileName();
   try {
     if (!backend->existsFile(file)) {
+      // One-time migration from the legacy notebook-root location.
+      const QString legacyFile = QStringLiteral("vx_keyword_to_tag.json");
+      if (backend->existsFile(legacyFile)) {
+        const QByteArray legacyData = backend->readFile(legacyFile);
+        QJsonParseError legacyError;
+        const auto legacyDoc = QJsonDocument::fromJson(legacyData, &legacyError);
+        if (legacyError.error == QJsonParseError::NoError && legacyDoc.isObject()) {
+          const auto legacyObj = legacyDoc.object();
+          // Best-effort migration; keep using the legacy data even if writing fails.
+          try {
+            backend->writeFile(file, legacyObj);
+            backend->removeFile(legacyFile);
+          } catch (Exception &p_e) {
+            qWarning() << "failed to migrate keyword-to-tag mapping" << legacyFile << p_e.what();
+          }
+          return legacyObj;
+        }
+      }
       return QJsonObject();
     }
 

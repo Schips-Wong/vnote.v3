@@ -8,13 +8,14 @@
 namespace vnotex {
 class Notebook;
 
-// Manages the notebook-level file "vx_keyword_to_tag.json", which maps a keyword (JSON key) to a
-// tag name (JSON value), e.g. { "usb": "|bsp|usb" }.
+// Manages "vx_keyword_to_tag.json" inside the notebook config folder (e.g.
+// "<notebook>/vx_notebook/vx_keyword_to_tag.json"). It maps a keyword (JSON key) to a tag name
+// (JSON value), e.g. { "usb": "|bsp|usb" }.
 class KeywordTagMapper {
 public:
   KeywordTagMapper() = delete;
 
-  // Relative path of the mapping file within the notebook root.
+  // Relative path of the mapping file within the notebook (inside the config folder).
   static QString getFileName();
 
   // Load the mapping. Return an empty object if the file does not exist or is invalid.
