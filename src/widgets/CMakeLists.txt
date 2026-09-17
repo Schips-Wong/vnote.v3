@@ -5,6 +5,7 @@ target_sources(vnote PRIVATE
     buttonpopup.cpp buttonpopup.h
     combobox.cpp combobox.h
     consoleviewer.cpp consoleviewer.h
+    dialogs/autotagdialog.cpp dialogs/autotagdialog.h
     dialogs/deleteconfirmdialog.cpp dialogs/deleteconfirmdialog.h
     dialogs/dialog.cpp dialogs/dialog.h
     dialogs/exportdialog.cpp dialogs/exportdialog.h

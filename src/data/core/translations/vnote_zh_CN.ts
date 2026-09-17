@@ -3808,6 +3808,23 @@ Remove them from the configuration?</source>
 <context>
     <name>vnotex::NotebookNodeExplorer</name>
     <message>
+        <location filename="../../../widgets/notebooknodeexplorer.cpp" line="1561"/>
+        <source>Auto Tag &amp;Detection</source>
+        <translation>自动标签探测(&amp;D)</translation>
+    </message>
+    <message>
+        <source>Only notes with content support auto tag detection.</source>
+        <translation>只有包含正文的笔记才支持自动标签探测。</translation>
+    </message>
+    <message>
+        <source>The note is empty.</source>
+        <translation>笔记内容为空。</translation>
+    </message>
+    <message>
+        <source>No candidate tags detected in the note.</source>
+        <translation>未从笔记中探测到候选标签。</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/notebooknodeexplorer.cpp" line="452"/>
         <source>Failed to load nodes of notebook (%1) (%2).</source>
         <translation>无法加载笔记本(%1)节点(%2)。</translation>
@@ -6178,6 +6195,41 @@ Backup file last modified time: %2</source>
         <location filename="../../../widgets/wordcountpopup.cpp" line="32"/>
         <source>Characters (with spaces)</source>
         <translation>字(有空格)</translation>
+    </message>
+</context>
+<context>
+    <name>vnotex::AutoTagDialog</name>
+    <message>
+        <source>Note: %1</source>
+        <translation>笔记：%1</translation>
+    </message>
+    <message>
+        <source>Tags detected from the note content. Check the ones you want to add:</source>
+        <translation>从笔记内容中探测到以下标签，勾选要添加的项：</translation>
+    </message>
+    <message>
+        <source>Select All</source>
+        <translation>全选</translation>
+    </message>
+    <message>
+        <source>Unselect All</source>
+        <translation>全不选</translation>
+    </message>
+    <message>
+        <source>%1 (already tagged)</source>
+        <translation>%1（已添加）</translation>
+    </message>
+    <message>
+        <source>Auto Tag Detection</source>
+        <translation>自动标签探测</translation>
+    </message>
+    <message>
+        <source>Tags updated: %1</source>
+        <translation>标签已更新：%1</translation>
+    </message>
+    <message>
+        <source>Failed to update tags.</source>
+        <translation>更新标签失败。</translation>
     </message>
 </context>
 </TS>

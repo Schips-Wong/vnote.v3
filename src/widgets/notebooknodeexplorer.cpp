@@ -12,6 +12,7 @@
 #include <QVBoxLayout>
 #include <functional>
 
+#include "dialogs/autotagdialog.h"
 #include "dialogs/deleteconfirmdialog.h"
 #include "dialogs/folderpropertiesdialog.h"
 #include "dialogs/notepropertiesdialog.h"
@@ -34,6 +35,7 @@
 #include <utils/clipboardutils.h>
 #include <utils/docsutils.h>
 #include <utils/iconutils.h>
+#include <utils/keywordextractor.h>
 #include <utils/pathutils.h>
 #include <utils/vxurlutils.h>
 #include <utils/widgetutils.h>
@@ -42,6 +44,7 @@
 #include <core/configmgr.h>
 #include <core/coreconfig.h>
 #include <core/events.h>
+#include <core/file.h>
 #include <core/fileopenparameters.h>
 #include <core/historymgr.h>
 #include <core/sessionconfig.h>
@@ -1154,6 +1157,8 @@ void NotebookNodeExplorer::createContextMenuOnNode(QMenu *p_menu, const Node *p_
     p_menu->addSeparator();
 
     createAndAddAction(Action::Tag, p_menu, p_master);
+
+    createAndAddAction(Action::AutoTagDetection, p_menu, p_master);
   }
 
   p_menu->addSeparator();
@@ -1537,6 +1542,46 @@ QAction *NotebookNodeExplorer::createAction(Action p_act, QObject *p_parent, boo
         return;
       }
       ViewTagsDialog dialog(node, VNoteX::getInst().getMainWindow());
+      dialog.exec();
+    });
+    break;
+
+  case Action::AutoTagDetection:
+    act = new QAction(generateMenuActionIcon(QStringLiteral("tag.svg")),
+                      tr("Auto Tag &Detection"), p_parent);
+    connect(act, &QAction::triggered, this, [this, p_master]() {
+      auto node = p_master ? getCurrentMasterNode() : getCurrentSlaveNode();
+      if (!node || checkInvalidNode(node)) {
+        return;
+      }
+
+      if (!node->hasContent()) {
+        MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
+                                 tr("Only notes with content support auto tag detection."));
+        return;
+      }
+
+      auto file = node->getContentFile();
+      const QString content = file ? file->read() : QString();
+      if (content.trimmed().isEmpty()) {
+        MessageBoxHelper::notify(MessageBoxHelper::Type::Information, tr("The note is empty."));
+        return;
+      }
+
+      const auto keywords = KeywordExtractor::extract(content, 30);
+      QStringList candidates;
+      candidates.reserve(keywords.size());
+      for (const auto &kw : keywords) {
+        candidates << kw.m_word;
+      }
+
+      if (candidates.isEmpty()) {
+        MessageBoxHelper::notify(MessageBoxHelper::Type::Information,
+                                 tr("No candidate tags detected in the note."));
+        return;
+      }
+
+      AutoTagDialog dialog(node, candidates, VNoteX::getInst().getMainWindow());
       dialog.exec();
     });
     break;

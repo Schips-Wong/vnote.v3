@@ -169,6 +169,7 @@ private:
     ExpandAll,
     PinToQuickAccess,
     Tag,
+    AutoTagDetection,
     VisualSettings,
     SetBackgroundColor,
     SetBorderColor,

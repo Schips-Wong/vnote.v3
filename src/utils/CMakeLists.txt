@@ -8,6 +8,7 @@ target_sources(vnote PRIVATE
     htmlutils.cpp htmlutils.h
     iconutils.cpp iconutils.h
     imageutils.cpp imageutils.h
+    keywordextractor.cpp keywordextractor.h
     pathutils.cpp pathutils.h
     printutils.cpp printutils.h
     processutils.cpp processutils.h
