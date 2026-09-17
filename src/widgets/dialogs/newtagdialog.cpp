@@ -21,7 +21,9 @@ static QVector<LevelLabelWithUpButton::Level> tagToLevels(const Tag *p_tag) {
   QVector<LevelLabelWithUpButton::Level> levels;
   while (p_tag) {
     LevelLabelWithUpButton::Level level;
+    // Keep the '/' separator but add 1 spaces on each side for readability.
     level.m_name = p_tag->fetchPath();
+    level.m_name.replace(QLatin1Char('/'), QStringLiteral(" / "));
     level.m_data = static_cast<const void *>(p_tag);
     levels.push_back(level);
     p_tag = p_tag->getParent();
