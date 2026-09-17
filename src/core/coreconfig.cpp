@@ -1,5 +1,6 @@
 #include "coreconfig.h"
 
+#include <QDebug>
 #include <QLocale>
 #include <QMetaEnum>
 
@@ -161,6 +162,26 @@ QJsonObject CoreConfig::saveShortcuts() const {
 const QString &CoreConfig::getShortcut(Shortcut p_shortcut) const {
   Q_ASSERT(p_shortcut < Shortcut::MaxShortcut);
   return m_shortcuts[p_shortcut];
+}
+
+void CoreConfig::applyShortcutOverlay(const QJsonObject &p_shortcuts) {
+  if (p_shortcuts.isEmpty()) {
+    return;
+  }
+
+  static const auto indexOfShortcutEnum =
+      CoreConfig::staticMetaObject.indexOfEnumerator("Shortcut");
+  Q_ASSERT(indexOfShortcutEnum >= 0);
+  const auto metaEnum = CoreConfig::staticMetaObject.enumerator(indexOfShortcutEnum);
+  // Skip the Max flag.
+  for (int i = 0; i < metaEnum.keyCount() - 1; ++i) {
+    const QString key = QString::fromLatin1(metaEnum.key(i));
+    const auto value = p_shortcuts.value(key);
+    if (value.isString()) {
+      m_shortcuts[i] = value.toString();
+      qInfo() << "shortcut overlay applied" << key << m_shortcuts[i];
+    }
+  }
 }
 
 int CoreConfig::getToolBarIconSize() const { return m_toolBarIconSize; }

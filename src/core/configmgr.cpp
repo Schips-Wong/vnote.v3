@@ -3,8 +3,10 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QJsonDocument>
+#include <QJsonParseError>
 #include <QPixmap>
 #include <QResource>
 #include <QScopeGuard>
@@ -83,6 +85,8 @@ ConfigMgr::ConfigMgr(bool p_isUnitTest, QObject *p_parent)
 
   m_config->init();
   m_sessionConfig->init();
+
+  applyNotebookShortcutOverlay();
 }
 
 ConfigMgr::~ConfigMgr() {}
@@ -93,6 +97,50 @@ ConfigMgr &ConfigMgr::getInst(bool p_isUnitTest) {
 }
 
 void ConfigMgr::initForUnitTest() { getInst(true); }
+
+void ConfigMgr::applyNotebookShortcutOverlay() {
+  const QString rawRootFolderPath = m_sessionConfig->getCurrentNotebookRootFolderPath();
+  if (rawRootFolderPath.isEmpty()) {
+    return;
+  }
+
+  // The overlay lives in the notebook config folder (vx_notebook), like other notebook config.
+  const QString overlayFile = PathUtils::concatenateFilePath(
+      PathUtils::concatenateFilePath(PathUtils::absolutePath(rawRootFolderPath),
+                                     QStringLiteral("vx_notebook")),
+      QStringLiteral("vnotex_shortcuts_overlay.json"));
+
+  QFile file(overlayFile);
+  if (!file.exists() || !file.open(QIODevice::ReadOnly)) {
+    return;
+  }
+
+  const QByteArray data = file.readAll();
+  file.close();
+
+  QJsonParseError error;
+  const auto doc = QJsonDocument::fromJson(data, &error);
+  if (error.error != QJsonParseError::NoError || !doc.isObject()) {
+    qWarning() << "failed to parse notebook shortcut overlay" << overlayFile
+               << error.errorString();
+    return;
+  }
+
+  const auto obj = doc.object();
+  // Accept { "core": { "shortcuts": {...} } } (same as vnotex.json), { "shortcuts": {...} } or a
+  // plain { "<ShortcutName>": "<key>" } object.
+  QJsonObject shortcuts =
+      obj.value(QStringLiteral("core")).toObject().value(QStringLiteral("shortcuts")).toObject();
+  if (shortcuts.isEmpty()) {
+    shortcuts = obj.value(QStringLiteral("shortcuts")).toObject();
+  }
+  if (shortcuts.isEmpty()) {
+    shortcuts = obj;
+  }
+
+  qInfo() << "applying notebook shortcut overlay from" << overlayFile;
+  m_config->getCoreConfig().applyShortcutOverlay(shortcuts);
+}
 
 void ConfigMgr::locateConfigFolder() {
   const auto appDirPath = getApplicationDirPath();

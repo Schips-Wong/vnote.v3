@@ -140,6 +140,9 @@ private:
 
   void checkUserConfig();
 
+  // Apply the per-notebook shortcut overlay (read from the current notebook's config folder).
+  void applyNotebookShortcutOverlay();
+
   static QString getDefaultConfigFilePath();
 
   QScopedPointer<MainConfig> m_config;

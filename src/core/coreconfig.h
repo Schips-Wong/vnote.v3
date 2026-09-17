@@ -109,6 +109,10 @@ public:
 
   const QString &getShortcut(Shortcut p_shortcut) const;
 
+  // Override shortcuts from a per-notebook overlay. Keys are Shortcut enum names (e.g.
+  // "ExpandContentArea") and values are the shortcut text (e.g. "F1").
+  void applyShortcutOverlay(const QJsonObject &p_shortcuts);
+
   int getToolBarIconSize() const;
   void setToolBarIconSize(int p_size);
 
