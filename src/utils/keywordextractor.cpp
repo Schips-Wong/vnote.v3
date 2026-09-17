@@ -30,6 +30,17 @@ inline bool isCjkToken(const QString &p_token) {
   return !p_token.isEmpty() && isCjkChar(p_token.at(0));
 }
 
+// A valid keyword must contain at least one letter or digit.
+// This filters out pure-symbol tokens such as Markdown heading markers ("####").
+inline bool containsLetterOrDigit(const QString &p_token) {
+  for (const auto &ch : p_token) {
+    if (ch.isLetterOrNumber()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // NOTE: keep this file ASCII-only (no non-ASCII literals) so that it compiles correctly
 // regardless of the compiler's source/execution charset. Chinese characters are written as
 // their Unicode code points instead.
@@ -153,8 +164,16 @@ void addTokens(const QString &p_text, int p_extraWeight, QHash<QString, int> &p_
       while (i < n && isWordChar(p_text.at(i))) {
         ++i;
       }
-      const QString word = p_text.mid(start, i - start).toLower();
-      if (word.size() >= 3) {
+      QString word = p_text.mid(start, i - start).toLower();
+
+      // Strip leading symbol characters (e.g. Markdown heading markers '#').
+      int lead = 0;
+      while (lead < word.size() && !word.at(lead).isLetterOrNumber()) {
+        ++lead;
+      }
+      word = word.mid(lead);
+
+      if (word.size() >= 3 && containsLetterOrDigit(word)) {
         p_counts[word] += 1 + p_extraWeight;
       }
     } else {
@@ -220,6 +239,11 @@ QVector<KeywordExtractor::Keyword> KeywordExtractor::extract(const QString &p_te
   for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
     const QString &word = it.key();
     const int count = it.value();
+
+    // Never emit pure-symbol tokens (e.g. Markdown heading markers "####").
+    if (!containsLetterOrDigit(word)) {
+      continue;
+    }
 
     if (isCjkToken(word)) {
       if (containsOnlyStopChars(word)) {
