@@ -5081,6 +5081,11 @@ Description: %3</source>
 <context>
     <name>vnotex::TagExplorer</name>
     <message>
+        <location filename="../../../widgets/tagexplorer.cpp" line="425"/>
+        <source>Keyword &amp;Mapping</source>
+        <translation>关键字映射(&amp;M)</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/tagexplorer.cpp" line="94"/>
         <source>Two Columns</source>
         <translation>双列</translation>
@@ -6230,6 +6235,49 @@ Backup file last modified time: %2</source>
     <message>
         <source>Failed to update tags.</source>
         <translation>更新标签失败。</translation>
+    </message>
+</context>
+<context>
+    <name>vnotex::KeywordMappingDialog</name>
+    <message>
+        <source>After mapping a keyword to a tag, it can be matched as a candidate tag in the note's auto tag detection.</source>
+        <translation>将关键字与标签映射后，可在笔记的自动标签探测中匹配为该候选标签。</translation>
+    </message>
+    <message>
+        <source>Update sets the tag's keyword mappings to exactly the keywords in the box (separated by ';'). Remove a keyword by deleting it from the box; clear all mappings by emptying the box.</source>
+        <translation>'更新' : 把标签的关键字映射设置为编辑框中的内容（以 ';' 分隔）：想删除某个关键字，就在编辑框中把它删掉；清空编辑框则会清除该标签的全部映射。</translation>
+    </message>
+    <message>
+        <source>No keyword mapping yet.</source>
+        <translation>未添加关键字映射。</translation>
+    </message>
+    <message>
+        <source>Mapped to keyword(s): %1</source>
+        <translation>已映射为关键字：%1</translation>
+    </message>
+    <message>
+        <source>Keyword:</source>
+        <translation>关键字:</translation>
+    </message>
+    <message>
+        <source>Separate multiple keywords with ';'.</source>
+        <translation>多个关键字请用 ';' 分隔。</translation>
+    </message>
+    <message>
+        <source>Update</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>Keyword Mapping</source>
+        <translation>关键字映射</translation>
+    </message>
+    <message>
+        <source>Failed to save keyword mapping.</source>
+        <translation>保存关键字映射失败。</translation>
+    </message>
+    <message>
+        <source>Keyword mapping saved.</source>
+        <translation>关键字映射已保存。</translation>
     </message>
 </context>
 </TS>

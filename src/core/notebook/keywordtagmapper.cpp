@@ -67,6 +67,74 @@ QStringList KeywordTagMapper::matchTags(const QJsonObject &p_mapping, const QStr
   return tags;
 }
 
+QStringList KeywordTagMapper::findKeysForTag(const QJsonObject &p_mapping,
+                                             const QString &p_tagName) {
+  QStringList keys;
+  if (p_tagName.isEmpty()) {
+    return keys;
+  }
+
+  for (auto it = p_mapping.constBegin(); it != p_mapping.constEnd(); ++it) {
+    if (it.value().toString() == p_tagName) {
+      keys << it.key();
+    }
+  }
+
+  return keys;
+}
+
+bool KeywordTagMapper::setMappings(Notebook *p_notebook, const QStringList &p_keywords,
+                                   const QString &p_tagName) {
+  if (!p_notebook || p_tagName.isEmpty()) {
+    return false;
+  }
+
+  QStringList keywords;
+  for (const auto &keyword : p_keywords) {
+    const auto trimmed = keyword.trimmed();
+    if (!trimmed.isEmpty() && !keywords.contains(trimmed)) {
+      keywords << trimmed;
+    }
+  }
+
+  const auto &backend = p_notebook->getBackend();
+  if (!backend) {
+    return false;
+  }
+
+  // The given keywords become the tag's complete set of mappings: first drop the old ones, then
+  // add the new set (a tag may still be matched by several keywords). An empty set clears all the
+  // mappings of the tag.
+  QJsonObject mapping = load(p_notebook);
+  bool changed = false;
+
+  const auto oldKeys = mapping.keys();
+  for (const auto &key : oldKeys) {
+    if (mapping.value(key).toString() == p_tagName) {
+      mapping.remove(key);
+      changed = true;
+    }
+  }
+
+  for (const auto &keyword : keywords) {
+    mapping[keyword] = p_tagName;
+    changed = true;
+  }
+
+  if (!changed) {
+    return false;
+  }
+
+  try {
+    backend->writeFile(getFileName(), mapping);
+  } catch (Exception &p_e) {
+    qWarning() << "failed to write keyword-to-tag mapping" << getFileName() << p_e.what();
+    return false;
+  }
+
+  return true;
+}
+
 bool KeywordTagMapper::renameTagValue(Notebook *p_notebook, const QString &p_oldTagName,
                                       const QString &p_newTagName) {
   if (!p_notebook || p_oldTagName.isEmpty() || p_newTagName.isEmpty() ||

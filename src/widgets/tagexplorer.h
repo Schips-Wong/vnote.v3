@@ -78,6 +78,8 @@ private:
 
   void removeTag();
 
+  void mapKeyword();
+
   void scrollToTag(const QString &p_name);
 
   QSharedPointer<Notebook> m_notebook;

@@ -16,6 +16,7 @@ target_sources(vnote PRIVATE
     dialogs/importfolderdialog.cpp dialogs/importfolderdialog.h
     dialogs/importfolderutils.cpp dialogs/importfolderutils.h
     dialogs/importnotebookdialog.cpp dialogs/importnotebookdialog.h
+    dialogs/keywordmappingdialog.cpp dialogs/keywordmappingdialog.h
     dialogs/levellabelwithupbutton.cpp dialogs/levellabelwithupbutton.h
     dialogs/linkinsertdialog.cpp dialogs/linkinsertdialog.h
     dialogs/managenotebooksdialog.cpp dialogs/managenotebooksdialog.h

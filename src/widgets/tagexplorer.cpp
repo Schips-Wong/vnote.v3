@@ -25,6 +25,7 @@
 #include <utils/iconutils.h>
 #include <utils/widgetutils.h>
 
+#include "dialogs/keywordmappingdialog.h"
 #include "dialogs/newtagdialog.h"
 #include "dialogs/renametagdialog.h"
 #include "listwidget.h"
@@ -422,6 +423,10 @@ void TagExplorer::handleTagTreeContextMenuRequested(const QPoint &p_pos) {
     menu.addAction(tr("&Rename"), this, &TagExplorer::renameTag);
 
     menu.addAction(tr("&Delete"), this, &TagExplorer::removeTag);
+
+    menu.addSeparator();
+
+    menu.addAction(tr("Keyword &Mapping"), this, &TagExplorer::mapKeyword);
   }
 
   menu.exec(m_tagTree->mapToGlobal(p_pos));
@@ -477,6 +482,18 @@ void TagExplorer::removeTag() {
   } else {
     VNoteX::getInst().showStatusMessageShort(tr("Failed to delete tag: %1").arg(tagName));
   }
+}
+
+void TagExplorer::mapKeyword() {
+  Q_ASSERT(m_notebook);
+  auto item = m_tagTree->currentItem();
+  if (!item) {
+    return;
+  }
+
+  KeywordMappingDialog dialog(m_notebook.data(), itemTag(item),
+                              VNoteX::getInst().getMainWindow());
+  dialog.exec();
 }
 
 void TagExplorer::handleTagMoved(QTreeWidgetItem *p_item) {
