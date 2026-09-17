@@ -68,7 +68,7 @@ add_executable(vnote WIN32 MACOSX_BUNDLE
     ${VX_APP_ICON_RC_WIN} ${VX_APP_ICON_MACOS} ${VX_RESOURCE_FILES}
 )
 
-add_dependencies(vnote VX_EXTRA_RESOURCE)
+add_dependencies(vnote VX_EXTRA_RESOURCE lrelease)
 
 set(VX_LIBS_FOLDER ../libs)
 target_include_directories(vnote PRIVATE
