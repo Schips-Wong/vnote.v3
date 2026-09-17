@@ -2538,9 +2538,10 @@ void NotebookNodeExplorer::autoDetectTags(bool p_master) {
     return;
   }
 
-  // Dictionary tags whose keywords appear in the content come first.
+  // Dictionary tags whose keywords appear in the content come first and are pre-selected.
   const auto mapping = KeywordTagMapper::load(node->getNotebook());
-  QStringList candidates = KeywordTagMapper::matchTags(mapping, content);
+  const QStringList mappedTags = KeywordTagMapper::matchTags(mapping, content);
+  QStringList candidates = mappedTags;
 
   const auto keywords = KeywordExtractor::extract(content, 30);
   for (const auto &kw : keywords) {
@@ -2555,7 +2556,7 @@ void NotebookNodeExplorer::autoDetectTags(bool p_master) {
     return;
   }
 
-  AutoTagDialog dialog(node, candidates, VNoteX::getInst().getMainWindow());
+  AutoTagDialog dialog(node, candidates, mappedTags, VNoteX::getInst().getMainWindow());
   dialog.exec();
 }
 

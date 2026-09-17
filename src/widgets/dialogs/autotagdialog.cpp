@@ -18,12 +18,14 @@ namespace {
 const int c_tagNameRole = Qt::UserRole;
 }
 
-AutoTagDialog::AutoTagDialog(Node *p_node, const QStringList &p_candidates, QWidget *p_parent)
+AutoTagDialog::AutoTagDialog(Node *p_node, const QStringList &p_candidates,
+                             const QStringList &p_preselectedTags, QWidget *p_parent)
     : Dialog(p_parent), m_node(p_node) {
-  setupUI(p_candidates);
+  setupUI(p_candidates, p_preselectedTags);
 }
 
-void AutoTagDialog::setupUI(const QStringList &p_candidates) {
+void AutoTagDialog::setupUI(const QStringList &p_candidates,
+                            const QStringList &p_preselectedTags) {
   auto mainWidget = new QWidget(this);
   setCentralWidget(mainWidget);
 
@@ -56,9 +58,10 @@ void AutoTagDialog::setupUI(const QStringList &p_candidates) {
     auto item = new QListWidgetItem(tag, m_tagList);
     item->setData(c_tagNameRole, tag);
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Checked);
+    // Only the keyword-dictionary matches are pre-selected.
+    item->setCheckState(p_preselectedTags.contains(tag) ? Qt::Checked : Qt::Unchecked);
     if (existingTags.contains(tag)) {
-      // Already attached: keep it checked but not editable.
+      // Already attached: listed for information only, not editable.
       item->setText(tr("%1 (already tagged)").arg(tag));
       item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
     }
