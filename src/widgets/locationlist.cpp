@@ -49,6 +49,9 @@ void LocationList::setupUI() {
   m_tree->setHeaderLabels(QStringList() << tr("Path") << tr("Line") << tr("Text"));
   m_tree->header()->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
   m_tree->header()->setStretchLastSection(true);
+  // A double click activates the item (opens the location) but does not toggle its expansion.
+  // Expand/collapse is done via the branch indicator only.
+  m_tree->setExpandsOnDoubleClick(false);
   connect(m_tree, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem *p_item, int p_col) {
     Q_UNUSED(p_col);
     if (!m_callback) {
