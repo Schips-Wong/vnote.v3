@@ -2144,6 +2144,11 @@ Remove them from the configuration?</source>
         <translation>Markdown指南</translation>
     </message>
     <message>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="659"/>
+        <source>Task Configuration Guide</source>
+        <translation>任务配置指南</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/toolbarhelper.cpp" line="678"/>
         <source>View Logs</source>
         <translation>查看日志</translation>

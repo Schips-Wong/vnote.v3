@@ -394,6 +394,20 @@ QToolBar *ToolBarHelper::setupSettingsToolBar(MainWindow *p_win, QToolBar *p_too
   return tb;
 }
 
+// Open the doc @p_baseName in a read-only window.
+static void openDocFile(const QString &p_baseName) {
+  const auto file = DocsUtils::getDocFile(p_baseName);
+  if (file.isEmpty()) {
+    qWarning() << "failed to locate doc" << p_baseName;
+    return;
+  }
+
+  auto paras = QSharedPointer<FileOpenParameters>::create();
+  paras->m_readOnly = true;
+  paras->m_sessionEnabled = false;
+  emit VNoteX::getInst().openFileRequested(file, paras);
+}
+
 static const QString c_fgPalette = QStringLiteral("widgets#toolbar#icon#fg");
 static const QString c_disabledPalette = QStringLiteral("widgets#toolbar#icon#disabled#fg");
 static const QString c_dangerousPalette = QStringLiteral("widgets#toolbar#icon#danger#fg");
@@ -639,25 +653,14 @@ void ToolBarHelper::setupMenuButton(MainWindow *p_win, QToolBar *p_toolBar) {
   {
     menu->addSeparator();
 
-    menu->addAction(MainWindow::tr("Shortcuts Help"), menu, []() {
-      const auto file = DocsUtils::getDocFile(QStringLiteral("shortcuts.md"));
-      if (!file.isEmpty()) {
-        auto paras = QSharedPointer<FileOpenParameters>::create();
-        paras->m_readOnly = true;
-        paras->m_sessionEnabled = false;
-        emit VNoteX::getInst().openFileRequested(file, paras);
-      }
-    });
+    menu->addAction(MainWindow::tr("Shortcuts Help"), menu,
+                    []() { openDocFile(QStringLiteral("shortcuts.md")); });
 
-    menu->addAction(MainWindow::tr("Markdown Guide"), menu, []() {
-      const auto file = DocsUtils::getDocFile(QStringLiteral("markdown_guide.md"));
-      if (!file.isEmpty()) {
-        auto paras = QSharedPointer<FileOpenParameters>::create();
-        paras->m_readOnly = true;
-        paras->m_sessionEnabled = false;
-        emit VNoteX::getInst().openFileRequested(file, paras);
-      }
-    });
+    menu->addAction(MainWindow::tr("Task Configuration Guide"), menu,
+                    []() { openDocFile(QStringLiteral("how_to_setup_task.md")); });
+
+    menu->addAction(MainWindow::tr("Markdown Guide"), menu,
+                    []() { openDocFile(QStringLiteral("markdown_guide.md")); });
 
     auto helpMenu = menu->addMenu(MainWindow::tr("Help"));
 

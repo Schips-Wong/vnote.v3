@@ -7,6 +7,7 @@
         <file>docs/en/external_programs.md</file>
         <file>docs/en/welcome.md</file>
         <file>docs/en/features_tips.txt</file>
+        <file>docs/en/how_to_setup_task.md</file>
         <file>docs/zh_CN/get_started.txt</file>
         <file>docs/zh_CN/about_vnotex.txt</file>
         <file>docs/zh_CN/shortcuts.md</file>
@@ -14,6 +15,7 @@
         <file>docs/zh_CN/external_programs.md</file>
         <file>docs/zh_CN/welcome.md</file>
         <file>docs/zh_CN/features_tips.txt</file>
+        <file>docs/zh_CN/how_to_setup_task.md</file>
         <file>web/markdown-viewer-template.html</file>
         <file>web/markdown-export-template.html</file>
         <file>web/css/user.css</file>
