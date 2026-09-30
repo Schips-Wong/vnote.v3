@@ -1908,6 +1908,16 @@ Remove them from the configuration?</source>
         <translation>从文件夹新建笔记本</translation>
     </message>
     <message>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="81"/>
+        <source>Open Notebook</source>
+        <translation>打开笔记本</translation>
+    </message>
+    <message>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="163"/>
+        <source>Export</source>
+        <translation>导出</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/toolbarhelper.cpp" line="122"/>
         <location filename="../../../widgets/toolbarhelper.cpp" line="131"/>
         <source>New Note</source>
