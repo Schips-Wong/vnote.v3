@@ -274,6 +274,7 @@ VNote 没有自己的控制台窗口，因此启动需要交互的命令行程�
 | `${bufferDir}` | 当前文件所在目录 | `C:\notes\test-task\test2` |
 | `${bufferExt}` | 当前文件扩展名（不含点） | `md` |
 | `${selectedText}` | 当前选中文本 | `a test` |
+| `${lineNumber}` | 当前光标所在行号（阅读模式下为顶部可见行），从 1 开始；未打开文件或该窗口没有行号概念时为空字符串 | `2` |
 | `${cwd}` | 本次任务的工作目录（见 `options.cwd` 规则） | `C:\notes\test-task` |
 | `${taskFile}` | 当前任务的配置文件路径 | |
 | `${taskDir}` | 当前任务配置文件所在目录 | |
@@ -285,7 +286,7 @@ VNote 没有自己的控制台窗口，因此启动需要交互的命令行程�
 | `${userThemeFolder}` / `${appThemeFolder}` | 用户/内置主题目录 | |
 | `${userDocsFolder}` / `${appDocsFolder}` | 用户/内置文档目录 | |
 
-> 早期版本的 `${file}`、`${fileBasename}` 等名字已改为 `${buffer*}` 系列；`${execPath}` 现为 `${exeFile}`，`${taskDirname}` 现为 `${taskDir}`，`${notebookFolderBasename}` 现为 `${notebookFolderName}`。当前版本**没有** `${lineNumber}`。
+> 早期版本的 `${file}`、`${fileBasename}` 等名字已改为 `${buffer*}` 系列；`${execPath}` 现为 `${exeFile}`，`${taskDirname}` 现为 `${taskDir}`，`${notebookFolderBasename}` 现为 `${notebookFolderName}`。
 
 ### 幻词（magic）
 

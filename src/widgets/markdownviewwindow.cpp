@@ -1113,6 +1113,28 @@ QString MarkdownViewWindow::selectedText() const {
   }
 }
 
+int MarkdownViewWindow::getCurrentLineNumber() const {
+  switch (m_mode) {
+  case ViewWindowMode::Read:
+    if (m_viewer) {
+      // Source line number of the top element node at the web side.
+      return adapter()->getTopLineNumber();
+    }
+    break;
+
+  case ViewWindowMode::Edit:
+    if (m_editor) {
+      return m_editor->getCursorPosition().first;
+    }
+    break;
+
+  default:
+    break;
+  }
+
+  return -1;
+}
+
 void MarkdownViewWindow::handleImageHostChanged(const QString &p_hostName) {
   m_imageHost = ImageHostMgr::getInst().find(p_hostName);
 

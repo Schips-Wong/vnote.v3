@@ -275,6 +275,14 @@ QString TextViewWindow::selectedText() const {
   return m_editor->getTextEdit()->selectedText();
 }
 
+int TextViewWindow::getCurrentLineNumber() const {
+  if (m_editor) {
+    return m_editor->getCursorPosition().first;
+  }
+
+  return -1;
+}
+
 void TextViewWindow::print() {
   auto printer = PrintUtils::promptForPrint(m_editor->getTextEdit()->hasSelection(), this);
   if (printer) {

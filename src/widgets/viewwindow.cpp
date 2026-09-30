@@ -671,6 +671,8 @@ void ViewWindow::handleImageHostChanged(const QString &p_hostName) {
 
 QString ViewWindow::selectedText() const { return QString(); }
 
+int ViewWindow::getCurrentLineNumber() const { return -1; }
+
 ViewWindow::TypeAction
 ViewWindow::toolBarActionToTypeAction(ViewWindowToolBarHelper::Action p_action) {
   Q_ASSERT(p_action >= ViewWindowToolBarHelper::Action::TypeBold &&

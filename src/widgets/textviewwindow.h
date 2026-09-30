@@ -24,6 +24,8 @@ public:
 
   QString selectedText() const Q_DECL_OVERRIDE;
 
+  int getCurrentLineNumber() const Q_DECL_OVERRIDE;
+
   void setMode(ViewWindowMode p_mode) Q_DECL_OVERRIDE;
 
   void openTwice(const QSharedPointer<FileOpenParameters> &p_paras) Q_DECL_OVERRIDE;

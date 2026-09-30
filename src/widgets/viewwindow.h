@@ -100,6 +100,10 @@ public:
 
   virtual QString selectedText() const;
 
+  // Line number (0-based) of the current position: the line of the cursor in edit mode, or the
+  // top visible line in read mode. Return -1 if not applicable.
+  virtual int getCurrentLineNumber() const;
+
   virtual void
   fetchWordCountInfo(const std::function<void(const WordCountInfo &)> &p_callback) const = 0;
 

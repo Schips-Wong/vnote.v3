@@ -164,6 +164,17 @@ void TaskVariableMgr::initBufferVariables() {
     }
     return QString();
   });
+  addVariable("lineNumber", [](Task *, const QString &) {
+    auto win = getCurrentViewWindow();
+    if (win) {
+      const int line = win->getCurrentLineNumber();
+      if (line >= 0) {
+        // 1-based, consistent with the line number shown in the editor.
+        return QString::number(line + 1);
+      }
+    }
+    return QString();
+  });
 }
 
 void TaskVariableMgr::initTaskVariables() {

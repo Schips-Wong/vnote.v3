@@ -275,6 +275,7 @@ Then:
 | `${bufferDir}` | Folder of the current file | `C:\notes\test-task\test2` |
 | `${bufferExt}` | Extension of the current file (without the dot) | `md` |
 | `${selectedText}` | Currently selected text | `a test` |
+| `${lineNumber}` | Line number of the cursor (the top visible line in read mode), start from 1. It is an empty string when no file is open or when the window has no notion of lines | `2` |
 | `${cwd}` | Working directory of this run (see the `options.cwd` rules) | `C:\notes\test-task` |
 | `${taskFile}` | Path of the configuration file of the current task | |
 | `${taskDir}` | Folder of the configuration file of the current task | |
@@ -286,7 +287,7 @@ Then:
 | `${userThemeFolder}` / `${appThemeFolder}` | User/built-in theme folders | |
 | `${userDocsFolder}` / `${appDocsFolder}` | User/built-in document folders | |
 
-> In earlier versions `${file}`, `${fileBasename}` and friends were renamed to the `${buffer*}` family; `${execPath}` is now `${exeFile}`, `${taskDirname}` is now `${taskDir}`, and `${notebookFolderBasename}` is now `${notebookFolderName}`. The current version has **no** `${lineNumber}`.
+> In earlier versions `${file}`, `${fileBasename}` and friends were renamed to the `${buffer*}` family; `${execPath}` is now `${exeFile}`, `${taskDirname}` is now `${taskDir}`, and `${notebookFolderBasename}` is now `${notebookFolderName}`.
 
 ###  Magic Words (magic)
 
