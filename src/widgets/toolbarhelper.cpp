@@ -297,9 +297,24 @@ void ToolBarHelper::setupTaskMenu(QMenu *p_menu) {
 }
 
 void ToolBarHelper::setupTaskActionMenu(QMenu *p_menu) {
-  p_menu->addAction(MainWindow::tr("Add Task"), p_menu, []() {
+  auto addTaskMenu = p_menu->addMenu(MainWindow::tr("Add Task"));
+
+  addTaskMenu->addAction(MainWindow::tr("To User Folder"), addTaskMenu, []() {
+    // The user task folder is created on demand.
     WidgetUtils::openUrlByDesktop(QUrl::fromLocalFile(ConfigMgr::getInst().getUserTaskFolder()));
   });
+
+  {
+    // Task folder inside the current notebook's config folder (vx_notebook/tasks).
+    const auto notebookTaskFolder = TaskMgr::getNotebookTaskFolder();
+    auto act = addTaskMenu->addAction(
+        MainWindow::tr("To Current Notebook Folder"), addTaskMenu, [notebookTaskFolder]() {
+          // Create it on demand, or the desktop cannot open a non-existent folder.
+          QDir().mkpath(notebookTaskFolder);
+          WidgetUtils::openUrlByDesktop(QUrl::fromLocalFile(notebookTaskFolder));
+        });
+    act->setEnabled(!notebookTaskFolder.isEmpty());
+  }
 
   p_menu->addAction(MainWindow::tr("Reload"), p_menu,
                     []() { VNoteX::getInst().getTaskMgr().reload(); });
