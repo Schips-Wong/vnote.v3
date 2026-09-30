@@ -21,9 +21,14 @@ env:
 
 jobs:
   build-linux:
-    name: Build On Ubuntu
-    runs-on: ubuntu-latest
+    name: Build On Ubuntu 22.04
+    # Build on the oldest still-supported Ubuntu so the produced AppImage keeps
+    # working against older glibc (a build on 24.04 raises the floor to 2.39).
+    runs-on: ubuntu-22.04
     timeout-minutes: 120
+    # The release / continuous-build steps below create releases and move tags.
+    permissions:
+      contents: write
 
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE.
@@ -58,14 +63,15 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y libfcitx5-qt-dev fcitx-libs-dev extra-cmake-modules libxkbcommon-dev
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y tree
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y fuse libxcb-cursor-dev
-          python3 -m pip config set global.break-system-packages true
 
       - name: Cache Qt
         id: cache-qt
         uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}/Qt
-          key: ${{ runner.os }}-QtCache-6.8
+          # The Qt tree also holds the OpenSSL compiled on the runner, so the key
+          # is tied to the image as well as to the Qt version.
+          key: ${{ runner.os }}-ubuntu-22.04-QtCache-6.8.3
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -75,6 +81,7 @@ jobs:
           modules: 'qtwebengine qtwebchannel qtpositioning qtpdf qtimageformats qt5compat qtserialport'
           tools: 'tools_opensslv3_src'
           cache: 'true'
+          cache-key-prefix: install-qt-action-ubuntu-22.04
 
       - name: Compile OpenSSLV3
         run: |
@@ -97,13 +104,17 @@ jobs:
           sudo make install
         working-directory: ${{runner.workspace}}/build
 
-      - name: Compile qt6ct
-        run: |
-          git clone https://github.com/trialuser02/qt6ct qt6ct.git
-          cd qt6ct.git
-          qmake
-          make -j$(nproc) && sudo make install
-        working-directory: ${{runner.workspace}}/build
+      # A "Compile qt6ct" step used to live here. It was removed because the
+      # upstream it cloned (trialuser02/qt6ct) is archived and includes
+      # <private/qgenericunixthemes_p.h>, a private header whose layout Qt keeps
+      # rearranging, so an unpinned clone is a build-breaking dependency. Its
+      # output was never bundled either: linuxdeploy-plugin-qt deploys only
+      # libqxdgdesktopportal.so out of platformthemes/ unless
+      # DEPLOY_PLATFORM_THEMES is set, and src/CPackLinuxDeployQt.cmake.in adds
+      # libqgtk3.so explicitly instead.
+      # Do not reintroduce it without also arranging deployment. Contrast with
+      # "Compile fcitxqt5" above, which must stay: platforminputcontexts IS
+      # deployed by linuxdeploy's Qt plugin.
 
       - name: Configure Project
         run: |
@@ -114,22 +125,25 @@ jobs:
 
       - name: Build Project
         run: |
-          # Remove the libqsqlmimer.so as libmimerapi.so is not deployed with Qt6
-          rm ${{runner.workspace}}/Qt/6.*/gcc_64/plugins/sqldrivers/libqsqlmimer.so
+          # Remove the libqsqlmimer.so as libmimerapi.so is not deployed with
+          # Qt6. `-f` on purpose: not every Qt build ships that plugin, and a
+          # plain `rm` aborts the whole step under `set -e`.
+          rm -f ${{runner.workspace}}/Qt/6.*/gcc_64/plugins/sqldrivers/libqsqlmimer.so
           cmake --build . --target pack
         working-directory: ${{runner.workspace}}/build
 
       - name: Fix Package
         run: |
+          set -e
           mkdir fixpackage
           mv VNote*.AppImage ./fixpackage
           pushd fixpackage
           # Extract the AppImage
           ./VNote*.AppImage --appimage-extract
           # Remove libnss3.so and libnssutil3.so
-          rm ./squashfs-root/usr/lib/libnss*.so
+          rm -f ./squashfs-root/usr/lib/libnss*.so
           # Re-package
-          rm VNote*.AppImage
+          rm -f VNote*.AppImage
           linuxdeploy-plugin-appimage-x86_64.AppImage --appdir=./squashfs-root
           mv VNote*.AppImage ../
           popd
@@ -142,20 +156,39 @@ jobs:
           name: VNote-${{env.VNOTE_VER}}-linux-x64.AppImage
           path: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-linux-x64.AppImage
 
-      - name: Update Tag
-        if: github.ref == 'refs/heads/master'
-        run: |
-          git tag --force continuous-build ${GITHUB_SHA}
-          git push --force --tags
-
       - name: Update Continuous Build Release
-        if: github.ref == 'refs/heads/master'
-        uses: johnwbyrd/update-release@v1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-linux-x64.AppImage
-          release: Continuous Build
-          tag: continuous-build
+        # [Release] pushes are excluded: those publish the stable release below.
+        if: >-
+          github.ref == 'refs/heads/master' &&
+          !startsWith(github.event.head_commit.message, '[Release]')
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh runs outside a git checkout here, so its git-based repo detection
+          # fails ("fatal: not a git repository"); GH_REPO removes that need.
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # Idempotent: every job of the run shares GITHUB_SHA.
+          gh release create continuous-build \
+            --target "$GITHUB_SHA" \
+            --title "Continuous Build" \
+            --prerelease \
+            --notes "Continuous build from master ($GITHUB_SHA)." || true
+          # Replaces the old `git tag --force && git push --force --tags`, which
+          # needs repo write access that a fork's GITHUB_TOKEN does not have.
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/continuous-build" \
+            -F sha="$GITHUB_SHA" -F force=true || true
+
+          # Prune only this platform's own asset family.
+          for asset in $(gh release view continuous-build \
+              --json assets --jq '.assets[].name' \
+              | grep -E 'linux-x64\.AppImage$'); do
+            gh release delete-asset continuous-build "$asset" -y || true
+          done
+
+          gh release upload continuous-build "VNote-${VNOTE_VER}-linux-x64.AppImage" --clobber
 
       - name: Release
         if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, '[Release]')
@@ -163,7 +196,15 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-linux-x64.AppImage
+          # Without this an unmatched upload is only a warning, so a release that
+          # attached nothing still reports success.
+          artifactErrorsFailBuild: true
           commit: master
           tag: v${{env.VNOTE_VER}}
           allowUpdates: true
+          # release-action replaces the body and the name on update unless told
+          # otherwise, and every platform job targets the same draft, so the
+          # last job to run would blank whatever notes were already set.
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
           draft: true

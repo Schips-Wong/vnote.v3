@@ -22,17 +22,35 @@ env:
 jobs:
   build:
     environment: Mac-code-sign
-    name: Build On MacOS
+    name: ${{ matrix.config.name }}
     timeout-minutes: 120
+    # The release / continuous-build steps below create releases and move tags.
+    permissions:
+      contents: write
+    # Exposed at job level so the signing steps can gate themselves on whether
+    # the secrets actually exist. A fork without a Developer ID certificate must
+    # still be able to build and publish an unsigned DMG instead of failing at
+    # `security import` with an empty .p12. (Secrets cannot be referenced in an
+    # `if:` directly, but they can be read back through the env context.)
+    env:
+      CLI_MACOS_CERTIFICATE: ${{ secrets.CLI_MACOS_CERTIFICATE }}
+      CLI_MACOS_CERTIFICATE_PWD: ${{ secrets.CLI_MACOS_CERTIFICATE_PWD }}
+      CLI_MACOS_CERTIFICATE_NAME: ${{ secrets.CLI_MACOS_CERTIFICATE_NAME }}
+      CLI_MACOS_NOTARY_USER: ${{ secrets.CLI_MACOS_NOTARY_USER }}
+      CLI_MACOS_TEAM_ID: ${{ secrets.CLI_MACOS_TEAM_ID }}
+      CLI_MACOS_NOTARY_PWD: ${{ secrets.CLI_MACOS_NOTARY_PWD }}
 
     strategy:
       fail-fast: false
       matrix:
         config:
-          - name: "Build on Arm64"
+          - name: "Build on Arm64 (Qt 6.8.3)"
             os: macos-latest
             arch: universal
             qt: 6.8.3
+            # Must stay in sync with CMAKE_OSX_DEPLOYMENT_TARGET in the root
+            # CMakeLists.txt and with LSMinimumSystemVersion in Info.plist.
+            deployment_target: "12.1"
 
     runs-on: ${{matrix.config.os}}
 
@@ -54,10 +72,19 @@ jobs:
 
       - name: Fix SQL
         run: |
+          set -e
+          # Qt ships qsqlodbc/qsqlpsql plugins that reference these libraries by
+          # absolute path. Resolve them from the actual brew prefix: hardcoding
+          # the Cellar version (`libpq/16.3/...`) breaks as soon as Homebrew
+          # bumps libpq, and the step dies on a dangling symlink.
+          IODBC_LIB="$(brew --prefix libiodbc)/lib/libiodbc.2.dylib"
+          LIBPQ_LIB="$(brew --prefix libpq)/lib/libpq.5.dylib"
+          test -f "$IODBC_LIB" || { echo "missing $IODBC_LIB"; exit 1; }
+          test -f "$LIBPQ_LIB" || { echo "missing $LIBPQ_LIB"; exit 1; }
           sudo mkdir -p /usr/local/opt/libiodbc/lib
-          sudo ln -s /opt/homebrew/opt/libiodbc/lib/libiodbc.2.dylib /usr/local/opt/libiodbc/lib/libiodbc.2.dylib
+          sudo ln -sf "$IODBC_LIB" /usr/local/opt/libiodbc/lib/libiodbc.2.dylib
           sudo mkdir -p /Applications/Postgres.app/Contents/Versions/14/lib
-          sudo ln -s /opt/homebrew/Cellar/libpq/16.3/lib/libpq.5.dylib /Applications/Postgres.app/Contents/Versions/14/lib/libpq.5.dylib
+          sudo ln -sf "$LIBPQ_LIB" /Applications/Postgres.app/Contents/Versions/14/lib/libpq.5.dylib
 
       - name: Install a fresh CMake
         run: |
@@ -77,7 +104,7 @@ jobs:
         run: |
           wget --no-verbose https://github.com/alexzielenski/optool/releases/download/0.1/optool.zip
           unzip ./optool.zip
-          sudo ln -s ./optool /usr/local/bin/optool
+          sudo ln -sf ./optool /usr/local/bin/optool
         working-directory: ${{runner.workspace}}
 
       - name: Cache Qt
@@ -85,7 +112,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{runner.workspace}}/Qt
-          key: ${{ runner.os }}-QtCache-6.8
+          key: ${{runner.os}}-${{matrix.config.arch}}-QtCache-${{matrix.config.qt}}
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -103,18 +130,27 @@ jobs:
         run: |
           qmake -v
           cmake --version
-          cmake -DMACDEPLOYQTFIX_EXECUTABLE=${{runner.workspace}}/macdeployqtfix/macdeployqtfix.py -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"  ${GITHUB_WORKSPACE}
+          # Keep the bundle's declared minimum OS aligned with the deployment
+          # target this Qt variant is built for: src/Packaging.cmake copies
+          # src/data/core/Info.plist into the bundle as-is and overrides the
+          # CMake-generated one, so a stale value there is what ships.
+          /usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion ${{matrix.config.deployment_target}}" "${GITHUB_WORKSPACE}/src/data/core/Info.plist"
+          cmake -DMACDEPLOYQTFIX_EXECUTABLE=${{runner.workspace}}/macdeployqtfix/macdeployqtfix.py -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=${{matrix.config.deployment_target}} ${GITHUB_WORKSPACE}
         working-directory: ${{runner.workspace}}/build
 
       - name: Build Project
         run: |
-          # Keep only required SQL drivers
-          rm ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlmimer.dylib
-          rm ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlodbc.dylib
-          rm ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlpsql.dylib
+          set -e
+          # Keep only required SQL drivers. `-f` because not every Qt build
+          # ships all of them, and a plain `rm` aborts the step.
+          rm -f ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlmimer.dylib
+          rm -f ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlodbc.dylib
+          rm -f ${{env.Qt6_DIR}}/plugins/sqldrivers/libqsqlpsql.dylib
 
           # Build the project
           cmake --build . --target pack
+
+          test -d ./src/VNote.app || { echo "src/VNote.app not produced"; exit 1; }
 
           # Fix Qt frameworks
           python3 ${{runner.workspace}}/macdeployqtfix/macdeployqtfix.py ./src/VNote.app/Contents/MacOS/VNote ${{env.Qt6_DIR}}/../..
@@ -144,6 +180,9 @@ jobs:
         working-directory: ${{runner.workspace}}/build
 
       - name: Codesign Bundle
+        # Skipped when no signing certificate is configured; the DMG is then
+        # produced unsigned rather than failing the whole job.
+        if: ${{ env.CLI_MACOS_CERTIFICATE != '' && env.CLI_MACOS_CERTIFICATE_PWD != '' && env.CLI_MACOS_CERTIFICATE_NAME != '' }}
         # Extract the secrets we defined earlier as environment variables
         env:
           MACOS_CERTIFICATE: ${{ secrets.CLI_MACOS_CERTIFICATE }}
@@ -151,8 +190,9 @@ jobs:
           MACOS_CERTIFICATE_NAME: ${{ secrets.CLI_MACOS_CERTIFICATE_NAME }}
           MACOS_CI_KEYCHAIN_PWD: ${{ secrets.CLI_MACOS_CERTIFICATE }}
         run: |
+          set -e
           # Turn our base64-encoded certificate back to a regular .p12 file
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+          echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
 
           # We need to create a new keychain, otherwise using the certificate will prompt
           # with a UI dialog asking for the certificate password, which we can't
@@ -166,29 +206,65 @@ jobs:
           echo "Codesigning main app bundle"
           codesign --force --deep -s "$MACOS_CERTIFICATE_NAME" --entitlements ${{github.workspace}}/package/entitlements.xml --options runtime ./src/VNote.app
           codesign -v -vvv ./src/VNote.app
-
-          hdiutil create -volname "VNote" -srcfolder ./src/VNote.app -ov -format UDZO VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
-          codesign --force --deep -s "$MACOS_CERTIFICATE_NAME" --entitlements ${{github.workspace}}/package/entitlements.xml --options runtime ./VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
-          codesign -v -vvv ./VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
-
         working-directory: ${{runner.workspace}}/build
 
-      - name: "Notarize Bundle"
+      - name: Create DMG
+        # Separate from signing: the DMG must be produced even when the build is
+        # unsigned, otherwise there is no artifact to archive.
+        run: |
+          set -e
+          DMG_NAME="VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg"
+
+          # Spotlight / XProtect can hold handles on freshly built or freshly
+          # codesigned bundle contents, causing `hdiutil create` to fail with
+          # "Resource busy". Flush filesystem buffers + wait a beat, then retry
+          # with backoff.
+          sync
+          sleep 5
+          for attempt in 1 2 3 4 5; do
+            echo "hdiutil create attempt $attempt: $DMG_NAME"
+            if hdiutil create -volname "VNote" -srcfolder ./src/VNote.app -ov -format UDZO "$DMG_NAME"; then
+              echo "hdiutil create succeeded on attempt $attempt"
+              break
+            fi
+            echo "hdiutil create failed on attempt $attempt; cleaning up and retrying"
+            hdiutil detach -force "/Volumes/VNote" 2>/dev/null || true
+            if [ "$attempt" = "5" ]; then
+              echo "hdiutil create exhausted retries"
+              exit 1
+            fi
+            sleep $((attempt * 10))
+          done
+          test -f "./$DMG_NAME" || { echo "$DMG_NAME not produced"; exit 1; }
+        working-directory: ${{runner.workspace}}/build
+
+      - name: Codesign DMG
+        if: ${{ env.CLI_MACOS_CERTIFICATE != '' && env.CLI_MACOS_CERTIFICATE_PWD != '' && env.CLI_MACOS_CERTIFICATE_NAME != '' }}
+        env:
+          MACOS_CERTIFICATE_NAME: ${{ secrets.CLI_MACOS_CERTIFICATE_NAME }}
+        run: |
+          set -e
+          DMG_NAME="VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg"
+          codesign --force --deep -s "$MACOS_CERTIFICATE_NAME" --entitlements ${{github.workspace}}/package/entitlements.xml --options runtime "./$DMG_NAME"
+          codesign -v -vvv "./$DMG_NAME"
+        working-directory: ${{runner.workspace}}/build
+
+      - name: Notarize Bundle
+        # Notarization only makes sense for a properly signed DMG.
+        if: ${{ env.CLI_MACOS_CERTIFICATE != '' && env.CLI_MACOS_NOTARY_USER != '' && env.CLI_MACOS_TEAM_ID != '' && env.CLI_MACOS_NOTARY_PWD != '' }}
         # Extract the secrets we defined earlier as environment variables
         env:
           PROD_MACOS_NOTARIZATION_APPLE_ID: ${{ secrets.CLI_MACOS_NOTARY_USER }}
           PROD_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.CLI_MACOS_TEAM_ID }}
           PROD_MACOS_NOTARIZATION_PWD: ${{ secrets.CLI_MACOS_NOTARY_PWD }}
         run: |
+          set -e
           # Store the notarization credentials so that we can prevent a UI password dialog
           # from blocking the CI
           echo "Create keychain profile"
           xcrun notarytool store-credentials "notarytool-profile" --apple-id "$PROD_MACOS_NOTARIZATION_APPLE_ID" --team-id "$PROD_MACOS_NOTARIZATION_TEAM_ID" --password "$PROD_MACOS_NOTARIZATION_PWD"
 
           # Here we send the notarization request to the Apple's Notarization service, waiting for the result.
-          # This typically takes a few seconds inside a CI environment, but it might take more depending on the App
-          # characteristics. Visit the Notarization docs for more information and strategies on how to optimize it if
-          # you're curious
           echo "Notarize app"
           xcrun notarytool submit "${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg" --keychain-profile "notarytool-profile" --wait
 
@@ -208,20 +284,39 @@ jobs:
           name: VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}
           path: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
 
-      - name: Update Tag
-        if: github.ref == 'refs/heads/master'
-        run: |
-          git tag --force continuous-build ${GITHUB_SHA}
-          git push --force --tags
-
       - name: Update Continuous Build Release
-        if: github.ref == 'refs/heads/master'
-        uses: johnwbyrd/update-release@v1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          files: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
-          release: Continuous Build
-          tag: continuous-build
+        # [Release] pushes are excluded: those publish the stable release below.
+        if: >-
+          github.ref == 'refs/heads/master' &&
+          !startsWith(github.event.head_commit.message, '[Release]')
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh runs outside a git checkout here, so its git-based repo detection
+          # fails ("fatal: not a git repository"); GH_REPO removes that need.
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # Idempotent: every job of the run shares GITHUB_SHA.
+          gh release create continuous-build \
+            --target "$GITHUB_SHA" \
+            --title "Continuous Build" \
+            --prerelease \
+            --notes "Continuous build from master ($GITHUB_SHA)." || true
+          # Replaces the old `git tag --force && git push --force --tags`, which
+          # needs repo write access that a fork's GITHUB_TOKEN does not have.
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/continuous-build" \
+            -F sha="$GITHUB_SHA" -F force=true || true
+
+          # Prune only this platform's own asset family.
+          for asset in $(gh release view continuous-build \
+              --json assets --jq '.assets[].name' \
+              | grep -E 'mac-universal\.dmg$'); do
+            gh release delete-asset continuous-build "$asset" -y || true
+          done
+
+          gh release upload continuous-build "VNote-${VNOTE_VER}-mac-${{matrix.config.arch}}.dmg" --clobber
 
       - name: Release
         if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, '[Release]')
@@ -229,7 +324,12 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-mac-${{matrix.config.arch}}.dmg
+          # Without this an unmatched upload is only a warning, so a release that
+          # attached nothing still reports success.
+          artifactErrorsFailBuild: true
           commit: master
           tag: v${{env.VNOTE_VER}}
           allowUpdates: true
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
           draft: true

@@ -23,6 +23,9 @@ jobs:
     name: ${{ matrix.config.name }}
     runs-on: windows-${{ matrix.config.vs_version }}
     timeout-minutes: 120
+    # The release / continuous-build steps below create releases and move tags.
+    permissions:
+      contents: write
 
     strategy:
       fail-fast: false
@@ -80,15 +83,51 @@ jobs:
 
       - name: Configure and Build Project
         shell: cmd
+        env:
+          VS_CMD: ${{ matrix.config.vs_cmd }}
+          QT_MAJOR: ${{ matrix.config.qt_major }}
+          # Qt 6 on Windows uses Schannel for TLS, so no OpenSSL DLL has to be
+          # bundled and the 3.20.1 workflow's path (build/openssl-utils.git/...)
+          # never existed here anyway. Kept as a knob for forks that do ship
+          # OpenSSL: src/Packaging.cmake globs "${OPENSSL_EXTRA_LIB_DIR}/lib*.dll".
+          VX_OPENSSL_EXTRA_LIB_DIR: ''
         run: |
           cmake --version
-          call "${{matrix.config.vs_cmd}}"
-          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DQT_DEFAULT_MAJOR_VERSION=${{matrix.config.qt_major}} -DOPENSSL_EXTRA_LIB_DIR=${{runner.workspace}}\build\openssl-utils.git\1.1.1j\Win_x64 %GITHUB_WORKSPACE%
-          cmake --build .
-          cmake --build . --target=pack
-          7z x VNote*.zip -o*
+          call "%VS_CMD%"
+          where cl || echo "cl.exe not on PATH"
+          REM -DCMAKE_*_COMPILER=cl is deliberate: the windows-2022 image ships
+          REM MinGW (C:\mingw64\bin) on PATH, and CMake would otherwise be free to
+          REM pick gcc.exe for the Ninja generator, producing a broken link later.
+          cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DQT_DEFAULT_MAJOR_VERSION=%QT_MAJOR% -DOPENSSL_EXTRA_LIB_DIR=%VX_OPENSSL_EXTRA_LIB_DIR% %GITHUB_WORKSPACE% > cmake-configure.log 2>&1 || (type cmake-configure.log && exit /b 1)
+          type cmake-configure.log
+          REM cmd reports only the LAST command's exit code, so every command needs
+          REM its own `|| exit /b 1`; without them a failed build (and the failed
+          REM pack and extraction after it) is reported as a green step.
+          cmake --build . || exit /b 1
+          cmake --build . --target=pack || exit /b 1
+          REM Plain `7z x` on purpose: the CPack ZIP already carries a single
+          REM top-level VNote-<ver>-win64/ directory, and `-o*` would nest it a
+          REM second time, moving the install root two levels down.
+          7z x VNote*.zip || exit /b 1
           dir
         working-directory: ${{runner.workspace}}/build
+
+      - name: Verify extracted package layout
+        shell: pwsh
+        working-directory: ${{runner.workspace}}/build
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $extracted = "VNote-${{env.VNOTE_VER}}-win64${{matrix.config.suffix}}"
+          if (-not (Test-Path -LiteralPath $extracted)) {
+            throw "Extracted dir '$extracted' not found"
+          }
+          $exe = Join-Path $extracted 'vnote.exe'
+          if (-not (Test-Path -LiteralPath $exe)) {
+            Get-ChildItem -Recurse -Filter vnote.exe $extracted |
+              ForEach-Object { Write-Host "  found at: $($_.FullName)" }
+            throw "vnote.exe is not at the root of $extracted; the CPack layout changed"
+          }
+          Write-Host "Package layout OK: $extracted"
 
       - name: Archive Artifacts
         uses: actions/upload-artifact@v4
@@ -102,31 +141,82 @@ jobs:
           name: VNote-${{env.VNOTE_VER}}-win64${{matrix.config.suffix}}.msi
           path: ${{runner.workspace}}/build/VNote*.msi
 
-      - name: Update Tag
-        if: github.ref == 'refs/heads/master'
-        shell: bash
-        run: |
-          git tag --force continuous-build ${GITHUB_SHA}
-          git push --force --tags
-
       - name: Update Continuous Build Release
-        if: github.ref == 'refs/heads/master'
-        uses: johnwbyrd/update-release@v1.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # glob not supported
-          files: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-win64${{matrix.config.suffix}}.zip
-          release: Continuous Build
-          tag: continuous-build
+        # [Release] pushes are excluded: they publish the stable release below,
+        # and copying that same ZIP into the prerelease channel would fight with
+        # the release step over the same assets.
+        if: >-
+          github.ref == 'refs/heads/master' &&
+          !startsWith(github.event.head_commit.message, '[Release]')
+        shell: bash
+        working-directory: ${{runner.workspace}}/build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh runs outside a git checkout here, so its git-based repo detection
+          # fails ("fatal: not a git repository"); GH_REPO removes that need.
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          # Idempotent: every job of the run shares GITHUB_SHA.
+          gh release create continuous-build \
+            --target "$GITHUB_SHA" \
+            --title "Continuous Build" \
+            --prerelease \
+            --notes "Continuous build from master ($GITHUB_SHA)." || true
+          # Replaces the old `git tag --force && git push --force --tags`, which
+          # needs repo write access that a fork's GITHUB_TOKEN does not have.
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/continuous-build" \
+            -F sha="$GITHUB_SHA" -F force=true || true
+
+          # Prune only this platform's own asset family.
+          # The regex ends with \.zip$ so the .delta/.manifest assets of other
+          # version schemes are never touched.
+          for asset in $(gh release view continuous-build \
+              --json assets --jq '.assets[].name' \
+              | grep -E 'win64\.zip$'); do
+            gh release delete-asset continuous-build "$asset" -y || true
+          done
+
+          gh release upload continuous-build "VNote-${VNOTE_VER}-win64.zip" --clobber
+
+      - name: Compose release artifact list
+        if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, '[Release]')
+        shell: pwsh
+        run: |
+          # FORWARD SLASHES ONLY. ncipollo resolves `artifacts:` through the
+          # glob package, where "\" is an ESCAPE character rather than a path
+          # separator, while ${{runner.workspace}} expands to a Windows path
+          # ("D:\a\vnote"). Passing the raw value makes glob match nothing, and
+          # the release silently attaches no asset at all.
+          $base = ("${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-win64${{matrix.config.suffix}}").Replace('\', '/')
+          $required = @("$base.zip")
+
+          $missing = @($required | Where-Object { -not (Test-Path -LiteralPath $_) })
+          if ($missing) {
+            Write-Error "Required release artifact(s) missing: $($missing -join ', ')"
+            exit 1
+          }
+
+          "RELEASE_ARTIFACTS=$($required -join ',')" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Release artifacts: $($required -join ', ')"
 
       - name: Release
         if: github.ref == 'refs/heads/master' && startsWith(github.event.head_commit.message, '[Release]')
         uses: ncipollo/release-action@v1.11.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          # glob not supported
-          artifacts: ${{runner.workspace}}/build/VNote-${{env.VNOTE_VER}}-win64${{matrix.config.suffix}}
+          # The 3.20.1 workflow passed the extracted *directory* here, which is
+          # not an uploadable asset; the ZIP is.
+          artifacts: ${{ env.RELEASE_ARTIFACTS }}
+          # Without this an unmatched upload is only a warning, so a release that
+          # attached nothing still reports success.
+          artifactErrorsFailBuild: true
           commit: master
           tag: v${{env.VNOTE_VER}}
           allowUpdates: true
+          # release-action replaces the body and the name on update unless told
+          # otherwise, and every platform job targets the same draft, so the
+          # last job to run would blank whatever notes were already set.
+          omitBodyDuringUpdate: true
+          omitNameDuringUpdate: true
           draft: true
