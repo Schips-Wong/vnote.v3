@@ -1991,22 +1991,32 @@ Remove them from the configuration?</source>
         <translation>可以在设置对话框中管理快速访问。</translation>
     </message>
     <message>
-        <location filename="../../../widgets/toolbarhelper.cpp" line="300"/>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="291"/>
+        <source>User Tasks</source>
+        <translation>用户任务</translation>
+    </message>
+    <message>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="293"/>
+        <source>Notebook Tasks</source>
+        <translation>笔记本任务</translation>
+    </message>
+    <message>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="322"/>
         <source>Add Task</source>
         <translation>添加任务</translation>
     </message>
     <message>
-        <location filename="../../../widgets/toolbarhelper.cpp" line="302"/>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="324"/>
         <source>To User Folder</source>
         <translation>到 用户目录</translation>
     </message>
     <message>
-        <location filename="../../../widgets/toolbarhelper.cpp" line="311"/>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="333"/>
         <source>To Current Notebook Folder</source>
         <translation>到 当前笔记本目录</translation>
     </message>
     <message>
-        <location filename="../../../widgets/toolbarhelper.cpp" line="319"/>
+        <location filename="../../../widgets/toolbarhelper.cpp" line="341"/>
         <source>Reload</source>
         <translation>重新加载</translation>
     </message>

@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QFont>
 #include <QMenu>
 #include <QToolBar>
 #include <QToolButton>
@@ -276,23 +277,44 @@ void ToolBarHelper::setupTaskMenu(QMenu *p_menu) {
 
   setupTaskActionMenu(p_menu);
 
-  p_menu->addSeparator();
-
   const auto &taskMgr = VNoteX::getInst().getTaskMgr();
-  for (const auto &task : taskMgr.getAppTasks()) {
-    addTaskMenu(p_menu, task.data());
-  }
 
-  p_menu->addSeparator();
+  // Tasks are loaded from three folders. Only the user folder and the notebook folder are labeled,
+  // and only when both of them provide tasks, so that it is clear from which folder the tasks come.
+  // Built-in tasks are always listed without a label.
+  struct TaskGroup {
+    const QVector<QSharedPointer<Task>> *m_tasks;
+    QString m_label;
+  };
 
-  for (const auto &task : taskMgr.getUserTasks()) {
-    addTaskMenu(p_menu, task.data());
-  }
+  const QVector<TaskGroup> taskGroups = {{&taskMgr.getAppTasks(), QString()},
+                                         {&taskMgr.getUserTasks(), MainWindow::tr("User Tasks")},
+                                         {&taskMgr.getNotebookTasks(),
+                                          MainWindow::tr("Notebook Tasks")}};
 
-  p_menu->addSeparator();
+  const bool labelFolders =
+      !taskMgr.getUserTasks().isEmpty() && !taskMgr.getNotebookTasks().isEmpty();
 
-  for (const auto &task : taskMgr.getNotebookTasks()) {
-    addTaskMenu(p_menu, task.data());
+  for (const auto &group : taskGroups) {
+    if (group.m_tasks->isEmpty()) {
+      continue;
+    }
+
+    if (labelFolders && !group.m_label.isEmpty()) {
+      // Use an inert (disabled) action as the group header. QMenu::addSection() is not rendered
+      // with text by all platform styles (e.g. Windows only draws the separator line).
+      auto labelAct = p_menu->addAction(group.m_label);
+      labelAct->setEnabled(false);
+      QFont font = labelAct->font();
+      font.setBold(true);
+      labelAct->setFont(font);
+    } else {
+      p_menu->addSeparator();
+    }
+
+    for (const auto &task : *group.m_tasks) {
+      addTaskMenu(p_menu, task.data());
+    }
   }
 }
 
