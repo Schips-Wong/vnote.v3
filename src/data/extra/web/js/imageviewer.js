@@ -219,8 +219,14 @@ class ImageViewer {
     };
 
     viewSVG(p_svgNode, p_background = 'transparent') {
-        var svg = p_svgNode.outerHTML.replace(/#/g, '%23').replace(/[\r\n]/g, '');
-        var src = 'data:image/svg+xml;utf8,' + svg;
+        // Serialize as well-formed XML instead of HTML outerHTML.
+        // outerHTML in an HTML document leaves void/empty elements (e.g. Mermaid's
+        // <br> inside a label) un-self-closed, producing invalid XML
+        // that the browser cannot load as an image/svg+xml data URI, leaving the
+        // double-click preview with a broken image. encodeURIComponent safely escapes
+        // '#', newlines and other characters (e.g. '%' from width="100%") that break a data: URI.
+        var svg = new XMLSerializer().serializeToString(p_svgNode);
+        var src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 
         this.viewImage(src, p_background);
     };
