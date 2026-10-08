@@ -47,6 +47,7 @@
 #include "widgetsfactory.h"
 #include "windowspanel.h"
 #include "windowsprovider.h"
+#include <buffer/buffer.h>
 #include <core/configmgr.h>
 #include <core/coreconfig.h>
 #include <core/events.h>
@@ -341,6 +342,21 @@ void MainWindow::setupNotebookExplorer() {
   connect(&VNoteX::getInst(), &VNoteX::locateNodeRequested, this, [this](Node *p_node) {
     m_dockWidgetHelper.activateDock(DockWidgetHelper::NavigationDock);
     m_notebookExplorer->locateNode(p_node);
+  });
+
+  // Locate the node of the window automatically once the current window changes.
+  connect(m_viewArea, &ViewArea::currentViewWindowChanged, this, [this]() {
+    if (!ConfigMgr::getInst().getWidgetConfig().isNodeExplorerAutoLocateNodeEnabled()) {
+      return;
+    }
+
+    auto win = m_viewArea->getCurrentViewWindow();
+    auto buffer = win ? win->getBuffer() : nullptr;
+    auto node = buffer ? buffer->getNode() : nullptr;
+    if (node) {
+      // Do not steal the focus from the editor.
+      m_notebookExplorer->locateNode(node, false);
+    }
   });
 
   auto &notebookMgr = VNoteX::getInst().getNotebookMgr();

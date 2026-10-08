@@ -55,7 +55,9 @@ public slots:
 
   void importFolder();
 
-  void locateNode(Node *p_node);
+  // Locate and select @p_node in the explorer.
+  // @p_focus: whether to give the focus to the explorer.
+  void locateNode(Node *p_node, bool p_focus = true);
 
   // Show the note context menu for @p_node as if it was right-clicked in the explorer.
   void popupContextMenuForNode(Node *p_node, const QPoint &p_globalPos);

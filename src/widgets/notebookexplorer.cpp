@@ -209,6 +209,15 @@ TitleBar *NotebookExplorer::setupTitleBar(QWidget *p_parent) {
     act->setChecked(widgetConfig.isNodeExplorerStickyParentItemsEnabled());
   }
 
+  {
+    auto act = titleBar->addMenuAction(
+        tr("Locate Node on Window Change"), titleBar, [](bool p_checked) {
+          ConfigMgr::getInst().getWidgetConfig().setNodeExplorerAutoLocateNodeEnabled(p_checked);
+        });
+    act->setCheckable(true);
+    act->setChecked(widgetConfig.isNodeExplorerAutoLocateNodeEnabled());
+  }
+
   setupExploreModeMenu(titleBar);
 
   return titleBar;
@@ -427,14 +436,16 @@ void NotebookExplorer::popupContextMenuForNode(Node *p_node, const QPoint &p_glo
   m_nodeExplorer->popupContextMenuForNode(p_node, p_globalPos);
 }
 
-void NotebookExplorer::locateNode(Node *p_node) {
+void NotebookExplorer::locateNode(Node *p_node, bool p_focus) {
   Q_ASSERT(p_node);
   auto nb = p_node->getNotebook();
   if (nb != m_currentNotebook) {
     emit notebookActivated(nb->getId());
   }
   m_nodeExplorer->setCurrentNode(p_node);
-  m_nodeExplorer->setFocus();
+  if (p_focus) {
+    m_nodeExplorer->setFocus();
+  }
 }
 
 const QSharedPointer<Notebook> &NotebookExplorer::currentNotebook() const {

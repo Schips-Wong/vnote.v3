@@ -47,6 +47,10 @@ public:
   bool isNodeExplorerStickyParentItemsEnabled() const;
   void setNodeExplorerStickyParentItemsEnabled(bool p_enabled);
 
+  // Whether to locate the node in the explorer when the current window changes.
+  bool isNodeExplorerAutoLocateNodeEnabled() const;
+  void setNodeExplorerAutoLocateNodeEnabled(bool p_enabled);
+
   bool isSearchPanelAdvancedSettingsVisible() const;
   void setSearchPanelAdvancedSettingsVisible(bool p_visible);
 
@@ -85,6 +89,8 @@ private:
   bool m_nodeExplorerCloseBeforeOpenWithEnabled = true;
 
   bool m_nodeExplorerStickyParentItemsEnabled = true;
+
+  bool m_nodeExplorerAutoLocateNodeEnabled = true;
 
   bool m_searchPanelAdvancedSettingsVisible = true;
 

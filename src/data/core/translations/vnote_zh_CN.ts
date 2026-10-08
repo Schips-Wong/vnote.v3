@@ -3537,6 +3537,11 @@ Remove them from the configuration?</source>
         <translation>父目录吸顶显示</translation>
     </message>
     <message>
+        <location filename="../../../widgets/notebookexplorer.cpp" line="214"/>
+        <source>Locate Node on Window Change</source>
+        <translation>切换窗口时定位节点</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/notebookexplorer.cpp" line="200"/>
         <source>Import External Files when Activated</source>
         <translation>激活时自动导入外部文件</translation>
