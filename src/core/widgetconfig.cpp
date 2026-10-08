@@ -37,6 +37,8 @@ void WidgetConfig::init(const QJsonObject &p_app, const QJsonObject &p_user) {
         READBOOL(QStringLiteral("node_explorer_auto_import_external_files_enabled"));
     m_nodeExplorerCloseBeforeOpenWithEnabled =
         READBOOL(QStringLiteral("node_explorer_close_before_open_with_enabled"));
+    m_nodeExplorerStickyParentItemsEnabled =
+        READBOOL(QStringLiteral("node_explorer_sticky_parent_items_enabled"));
   }
 
   m_searchPanelAdvancedSettingsVisible =
@@ -71,6 +73,8 @@ QJsonObject WidgetConfig::toJson() const {
       m_nodeExplorerAutoImportExternalFilesEnabled;
   obj[QStringLiteral("node_explorer_close_before_open_with_enabled")] =
       m_nodeExplorerCloseBeforeOpenWithEnabled;
+  obj[QStringLiteral("node_explorer_sticky_parent_items_enabled")] =
+      m_nodeExplorerStickyParentItemsEnabled;
 
   obj[QStringLiteral("search_panel_advanced_settings_visible")] =
       m_searchPanelAdvancedSettingsVisible;
@@ -142,6 +146,14 @@ bool WidgetConfig::getNodeExplorerCloseBeforeOpenWithEnabled() const {
 
 void WidgetConfig::setNodeExplorerCloseBeforeOpenWithEnabled(bool p_enabled) {
   updateConfig(m_nodeExplorerCloseBeforeOpenWithEnabled, p_enabled, this);
+}
+
+bool WidgetConfig::isNodeExplorerStickyParentItemsEnabled() const {
+  return m_nodeExplorerStickyParentItemsEnabled;
+}
+
+void WidgetConfig::setNodeExplorerStickyParentItemsEnabled(bool p_enabled) {
+  updateConfig(m_nodeExplorerStickyParentItemsEnabled, p_enabled, this);
 }
 
 bool WidgetConfig::isSearchPanelAdvancedSettingsVisible() const {

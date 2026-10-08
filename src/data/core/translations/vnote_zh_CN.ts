@@ -3532,6 +3532,11 @@ Remove them from the configuration?</source>
         <translation>重建笔记本数据库</translation>
     </message>
     <message>
+        <location filename="../../../widgets/notebookexplorer.cpp" line="204"/>
+        <source>Pin Parent Folders on the Top</source>
+        <translation>父目录吸顶显示</translation>
+    </message>
+    <message>
         <location filename="../../../widgets/notebookexplorer.cpp" line="200"/>
         <source>Import External Files when Activated</source>
         <translation>激活时自动导入外部文件</translation>

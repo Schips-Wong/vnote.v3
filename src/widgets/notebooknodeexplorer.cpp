@@ -2232,6 +2232,10 @@ void NotebookNodeExplorer::setAutoImportExternalFiles(bool p_enabled) {
   m_autoImportExternalFiles = p_enabled;
 }
 
+void NotebookNodeExplorer::setStickyParentItemsEnabled(bool p_enabled) {
+  m_masterExplorer->setStickyParentItemsEnabled(p_enabled);
+}
+
 void NotebookNodeExplorer::manualSort(bool p_master) {
   auto node = p_master ? getCurrentMasterNode() : getCurrentSlaveNode();
   if (!node) {

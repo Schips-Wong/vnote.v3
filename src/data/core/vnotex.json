@@ -594,6 +594,8 @@
         "node_explorer_auto_import_external_files_enabled" : true,
         "//comment" : "Whether close the file before opening it with external program",
         "node_explorer_close_before_open_with_enabled" : true,
+        "//comment" : "Whether to pin the expanded parent folders on the top of the node explorer",
+        "node_explorer_sticky_parent_items_enabled" : true,
         "//comment" : "0 - combined/1 - separate_single/2 - separate_double",
         "node_explorer_explore_mode" : 0,
         "search_panel_advanced_settings_visible" : true,

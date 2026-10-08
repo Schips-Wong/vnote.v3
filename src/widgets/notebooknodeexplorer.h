@@ -112,6 +112,9 @@ public:
 
   void setExternalFilesVisible(bool p_visible);
 
+  // Whether to pin the expanded parent folders on the top of the master explorer.
+  void setStickyParentItemsEnabled(bool p_enabled);
+
   void setAutoImportExternalFiles(bool p_enabled);
 
   Node *currentExploredFolderNode() const;

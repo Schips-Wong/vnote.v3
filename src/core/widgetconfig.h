@@ -43,6 +43,10 @@ public:
   bool getNodeExplorerCloseBeforeOpenWithEnabled() const;
   void setNodeExplorerCloseBeforeOpenWithEnabled(bool p_enabled);
 
+  // Whether to pin the expanded parent folders on the top of the node explorer.
+  bool isNodeExplorerStickyParentItemsEnabled() const;
+  void setNodeExplorerStickyParentItemsEnabled(bool p_enabled);
+
   bool isSearchPanelAdvancedSettingsVisible() const;
   void setSearchPanelAdvancedSettingsVisible(bool p_visible);
 
@@ -79,6 +83,8 @@ private:
   bool m_nodeExplorerAutoImportExternalFilesEnabled = true;
 
   bool m_nodeExplorerCloseBeforeOpenWithEnabled = true;
+
+  bool m_nodeExplorerStickyParentItemsEnabled = true;
 
   bool m_searchPanelAdvancedSettingsVisible = true;
 

@@ -86,6 +86,8 @@ void NotebookExplorer::setupUI() {
   m_nodeExplorer->setViewOrder(widgetConfig.getNodeExplorerViewOrder());
   m_nodeExplorer->setExploreMode(widgetConfig.getNodeExplorerExploreMode());
   m_nodeExplorer->setExternalFilesVisible(widgetConfig.isNodeExplorerExternalFilesVisible());
+  m_nodeExplorer->setStickyParentItemsEnabled(
+      widgetConfig.isNodeExplorerStickyParentItemsEnabled());
   connect(m_nodeExplorer, &NotebookNodeExplorer::nodeActivated, &VNoteX::getInst(),
           &VNoteX::openNodeRequested);
   connect(m_nodeExplorer, &NotebookNodeExplorer::fileActivated, &VNoteX::getInst(),
@@ -195,6 +197,16 @@ TitleBar *NotebookExplorer::setupTitleBar(QWidget *p_parent) {
         });
     act->setCheckable(true);
     act->setChecked(widgetConfig.getNodeExplorerCloseBeforeOpenWithEnabled());
+  }
+
+  {
+    auto act = titleBar->addMenuAction(
+        tr("Pin Parent Folders on the Top"), titleBar, [this](bool p_checked) {
+          ConfigMgr::getInst().getWidgetConfig().setNodeExplorerStickyParentItemsEnabled(p_checked);
+          m_nodeExplorer->setStickyParentItemsEnabled(p_checked);
+        });
+    act->setCheckable(true);
+    act->setChecked(widgetConfig.isNodeExplorerStickyParentItemsEnabled());
   }
 
   setupExploreModeMenu(titleBar);
